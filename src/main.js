@@ -1,4 +1,5 @@
 import '@fontsource-variable/bricolage-grotesque/wdth.css';
+import qrcode from 'qrcode-generator';
 import '@fontsource/figtree/400.css';
 import '@fontsource/figtree/500.css';
 import '@fontsource/figtree/600.css';
@@ -689,8 +690,47 @@ function installTile(p) {
     ${steps}
     <button class="linkbtn" type="button" id="skip-install">Continue in the browser instead</button></div>`;
 }
+
+/* ---------------- Desktop landing (the app is phone-first) ---------------- */
+function qrSvg(text) {
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(); let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="QR code for ${esc(text)}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${d}" fill="#0f3b33"/></svg>`;
+}
+function desktopScreen() {
+  tabsEl.hidden = true; uid = 0;
+  document.body.classList.add('desk-mode');
+  const url = location.origin.replace(/^https?:\/\/(www\.)?/, '');
+  app.innerHTML = `<div class="desk">
+    <header class="top">${wordmark()}</header>
+    <div class="desk-grid">
+      <div class="tile hero halftone desk-hero"><canvas data-scene="dawn"></canvas>
+        <div class="txt"><span class="eyebrow">Your wellness concierge</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
+      <div class="tile desk-qr"><span class="eyebrow">Made for your phone</span>
+        <div class="qr">${qrSvg(location.origin + '/')}</div>
+        <p class="desk-scan">Scan with your phone camera</p>
+        <p class="desk-or">or type <b>${esc(url)}</b> into your phone’s browser</p></div>
+      <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
+      <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate or snap a photo. Totals use USDA nutrition data.</p></div>
+      <div class="tile desk-feat mint"><b class="hv">Habit coach</b><p>Friendly nudges and simple meal ideas when you need them.</p></div>
+      <div class="tile desk-feat lilac"><b class="hv">The Circle</b><p>A small group that cheers your wins, with live calls.</p></div>
+      <div class="tile desk-steps"><span class="eyebrow">How to get the app</span>
+        <ol class="steps"><li>Open the link on your phone.</li><li>Add it to your home screen. The page shows you how on iPhone and Android.</li><li>Open <b>LongevityCo</b> from your home screen and sign up.</li></ol></div>
+    </div>
+    <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a> · <button class="linkbtn" type="button" id="desk-continue">Already a member? Sign in on this computer</button></p>
+  </div>`;
+  requestAnimationFrame(paintAll);
+  document.getElementById('desk-continue').onclick = () => { try { sessionStorage.setItem('lc-desktop-ok', '1'); } catch { /* storage blocked */ } document.body.classList.remove('desk-mode'); authScreen(); };
+}
+function isDesktop() {
+  const p = platform();
+  return !p.mobile && matchMedia('(pointer: fine)').matches && innerWidth >= 900;
+}
 /* ---------------- Sign-in + onboarding ---------------- */
 function authScreen(msg = '') {
+  let deskOk = false; try { deskOk = sessionStorage.getItem('lc-desktop-ok') === '1'; } catch { /* storage blocked */ }
+  if (!msg && !deskOk && isDesktop()) return desktopScreen();
   tabsEl.hidden = true; uid = 0;
   const p = platform();
   let skipped = false; try { skipped = sessionStorage.getItem('lc-skip-install') === '1'; } catch { /* storage blocked */ }
