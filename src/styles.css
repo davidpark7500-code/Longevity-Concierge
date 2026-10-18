@@ -388,3 +388,8 @@ a.btn{text-decoration:none}
 .adm-mem small{color:var(--muted)}
 .adm-mem select{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:8px 10px;font:inherit;align-self:flex-start}
 .lesson .min{opacity:.75}
+
+.install-tile{display:flex;flex-direction:column;gap:10px;border:2px solid var(--sun)}
+.install-tile p{margin:0}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+.steps li{padding-left:2px}

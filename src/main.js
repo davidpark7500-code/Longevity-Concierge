@@ -664,17 +664,50 @@ async function openAdmin() {
   load();
 }
 
+
+/* ---------------- Install-to-home-screen nudge (shown before sign-up) ---------------- */
+let installEvt = null;
+if (typeof window !== 'undefined') window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; document.querySelectorAll('[data-native-install]').forEach(b => b.hidden = false); });
+function platform() {
+  const ua = navigator.userAgent || '';
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const inApp = /Instagram|FBAN|FBAV|FB_IAB|TikTok|Snapchat|Line\/|LinkedInApp|Twitter/i.test(ua);
+  return { standalone, ios, android, inApp, mobile: ios || android };
+}
+const SHARE_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+function installTile(p) {
+  let steps;
+  if (p.inApp) steps = `<p>You opened this inside another app, which can’t install it. Tap the <b>•••</b> or <b>⋮</b> menu and choose <b>Open in ${p.ios ? 'Safari' : 'browser'}</b>, then come back to this screen.</p>`;
+  else if (p.ios) steps = `<ol class="steps"><li>Tap <b>Share</b> ${SHARE_ICON} at the bottom of Safari. On newer iPhones it’s inside the <b>•••</b> menu.</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>, then open <b>LongevityCo</b> from your home screen and sign up there.</li></ol>`;
+  else steps = `<button class="btn sun" type="button" data-native-install ${installEvt ? '' : 'hidden'}>Install the app</button>
+    <ol class="steps"><li>Tap the <b>⋮</b> menu at the top right of Chrome.</li><li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li><li>Open <b>LongevityCo</b> from your home screen and sign up there.</li></ol>`;
+  return `<div class="tile install-tile"><span class="eyebrow">Step 1 · Before you sign up</span>
+    <h2 class="hv onb-h">Put it on your home screen.</h2>
+    <p>It opens full screen like a regular app, and you stay signed in. If you sign up here in the browser first, you’ll have to sign in again inside the app.</p>
+    ${steps}
+    <button class="linkbtn" type="button" id="skip-install">Continue in the browser instead</button></div>`;
+}
 /* ---------------- Sign-in + onboarding ---------------- */
 function authScreen(msg = '') {
   tabsEl.hidden = true; uid = 0;
+  const p = platform();
+  let skipped = false; try { skipped = sessionStorage.getItem('lc-skip-install') === '1'; } catch { /* storage blocked */ }
+  const nudge = p.mobile && !p.standalone && !skipped && !msg;
   app.innerHTML = `<div class="auth"><header class="top">${wordmark()}</header>
     <div class="tile hero halftone auth-hero"><canvas data-scene="dawn"></canvas><div class="txt"><span class="eyebrow">Members</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
-    <form class="tile auth-form" id="auth-form"><label class="eyebrow" for="auth-email">Sign in or create your account</label>
+    ${nudge ? installTile(p) : ''}
+    <form class="tile auth-form" id="auth-form" ${nudge ? 'hidden' : ''}><label class="eyebrow" for="auth-email">Sign in or create your account</label>
       <input id="auth-email" class="inp" type="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
       <button class="btn sun" type="submit">Email me a sign-in code</button>
       <p class="status">No password needed. We’ll email you a link and a 6-digit code.</p>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p></div>`;
   requestAnimationFrame(paintAll);
+  const skip = document.getElementById('skip-install');
+  if (skip) skip.onclick = () => { try { sessionStorage.setItem('lc-skip-install', '1'); } catch { /* storage blocked */ } document.querySelector('.install-tile').remove(); document.getElementById('auth-form').hidden = false; };
+  const nat = document.querySelector('[data-native-install]');
+  if (nat) nat.onclick = async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice.catch(() => null); installEvt = null; nat.hidden = true; if (r?.outcome === 'accepted') toast('Installed. Open LongevityCo from your home screen.'); };
   document.getElementById('auth-form').addEventListener('submit', async e => {
     e.preventDefault(); const email = document.getElementById('auth-email').value.trim().toLowerCase(); if (!email) return;
     const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Sending…';
@@ -685,7 +718,7 @@ function authScreen(msg = '') {
 function codeScreen(email, msg = '') {
   const f = document.querySelector('.auth-form') || app;
   f.outerHTML = `<form class="tile auth-form" id="code-form"><span class="eyebrow">Check your email</span>
-    <p>We sent a sign-in link and a 6-digit code to <b>${esc(email)}</b>. Tap the link, or type the code here.</p>
+    <p>We sent a sign-in link and a 6-digit code to <b>${esc(email)}</b>. ${platform().standalone ? 'Type the code here. The link would open your browser instead of the app.' : 'Tap the link, or type the code here.'}</p>
     <input id="auth-code" class="inp code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
     <button class="btn sun" type="submit">Sign in</button>
     <button class="linkbtn" type="button" id="auth-back">Use a different email</button>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>`;
