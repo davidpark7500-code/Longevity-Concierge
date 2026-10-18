@@ -10,7 +10,7 @@ import './styles.css';
 import FOOD_ROWS from './data/foods.json';
 import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
-import { CAPS, preFilter, PROVIDER_TEXT } from './shared/guardrails.js';
+import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
 
 const { DEMO } = cloud;
@@ -498,6 +498,19 @@ async function photoToBase64(file) {
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   return c.toDataURL('image/jpeg', 0.82).split(',')[1];
 }
+// Re-check each AI item against the USDA data on the phone; use USDA numbers when the food matches.
+function usdaCheck(x) {
+  if (!(x.grams > 0)) return x;
+  const raw = String(x.name).toLowerCase();
+  if (/\b(with|and)\b|&|\+/.test(raw)) return x;            // mixed dishes: keep the AI estimate
+  const name = raw.replace(/[,;]/g, ' ');
+  const m = parseMeal(FOODS, `${Math.round(x.grams)} g ${name}`, true).matched[0];
+  if (!m) return x;
+  const head = name.split(/\s+/).find(w => w && !/^(cooked|steamed|grilled|roasted|baked|boiled|raw|fried|sauteed|fresh|plain|scrambled|chopped|sliced)$/.test(w)) || '';
+  const sameFood = m.name.toLowerCase().startsWith(head.replace(/(?<!s)s$/, '').slice(0, 5));
+  const close = (a, b) => Math.abs(a - b) <= Math.max(3, 0.4 * Math.max(a, b));
+  return sameFood && close(m.protein, x.protein) ? { ...x, protein: m.protein, fiber: m.fiber, source: 'usda', usda: m.name } : x;
+}
 function openLogger(mode) {
   const s = sheet(`<header><span class="hv">Log a meal</span><button class="x" aria-label="Close">×</button></header>
     <div class="logger">
@@ -537,8 +550,9 @@ function openLogger(mode) {
       if (photo && !fill) { body.image = await photoToBase64(photo); body.mediaType = 'image/jpeg'; }
       const r = await cloud.api('/api/estimate', body);
       if (r.limit) { est.innerHTML = `<p class="status">${esc(r.note)}</p>`; return; }
-      if (fill && pending) pending = { items: pending.items.concat(r.items), missed: [], note: 'Filled in with AI. ' + (r.note || ''), text };
-      else pending = { items: r.items, missed: [], note: r.note, text };
+      const items = (r.items || []).map(usdaCheck);
+      if (fill && pending) pending = { items: pending.items.concat(items), missed: [], note: 'Filled in with AI. ' + (r.note || ''), text };
+      else pending = { items, missed: [], note: r.note, text };
       renderEst();
     } catch (err) { est.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
     finally { busy = false; go.disabled = false; }

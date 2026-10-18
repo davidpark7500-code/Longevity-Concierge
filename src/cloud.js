@@ -1,11 +1,13 @@
 // Everything that talks to Supabase or our server functions lives here.
 import { createClient } from '@supabase/supabase-js';
 
-const SB_URL = import.meta.env.VITE_SUPABASE_URL;
-const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Public project settings. These are safe in the code: the anon key only allows what the
+// database security rules allow. Override with VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY if needed.
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ptsneanksrzmzurfxvph.supabase.co';
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0c25lYW5rc3J6bXp1cmZ4dnBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyOTM4ODIsImV4cCI6MjEwNzg2OTg4Mn0.eQb5KnnkihGkN1XgVE958W_eBnIHXllmEWv-f5eMY1U';
 
-// Demo mode: no Supabase settings -> the app runs on sample data in this browser only.
-export const DEMO = !SB_URL || !SB_KEY;
+// Demo mode (sample data in this browser only): build with VITE_DEMO=1, or open the app with ?demo
+export const DEMO = import.meta.env.VITE_DEMO === '1' || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('demo'));
 export const sb = DEMO ? null : createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 // ---------- Auth ----------
@@ -54,11 +56,12 @@ if (typeof document !== 'undefined') {
 }
 
 // ---------- Server functions ----------
+// Server functions run on Supabase Edge Functions: '/api/coach' -> <project>/functions/v1/api/coach
 export async function api(path, body, method = 'POST') {
   const session = await getSession();
-  const res = await fetch(path, {
+  const res = await fetch(SB_URL + '/functions/v1' + path, {
     method,
-    headers: { 'content-type': 'application/json', ...(session ? { authorization: `Bearer ${session.access_token}` } : {}) },
+    headers: { 'content-type': 'application/json', apikey: SB_KEY, ...(session ? { authorization: `Bearer ${session.access_token}` } : {}) },
     ...(method === 'GET' ? {} : { body: JSON.stringify(body || {}) }),
   });
   const data = await res.json().catch(() => ({}));

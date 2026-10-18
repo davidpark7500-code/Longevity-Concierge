@@ -19,6 +19,7 @@ export function lookup(rows, q, limit = 6) {
 const NUMW = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, half: .5, '½': .5, '¼': .25, '¾': .75 };
 const UNIT = { g: 'g', gram: 'g', grams: 'g', oz: 'oz', ounce: 'oz', ounces: 'oz', lb: 'lb', lbs: 'lb', pound: 'lb', cup: 'cup', cups: 'cup', c: 'cup', tbsp: 'tbsp', tablespoon: 'tbsp', tablespoons: 'tbsp', tsp: 'tsp', teaspoon: 'tsp', teaspoons: 'tsp',
   slice: 'slice', slices: 'slice', piece: 'piece', pieces: 'piece', scoop: 'scoop', scoops: 'scoop', large: 'each', medium: 'each', small: 'each', container: 'each', fruit: 'each' };
+const COOK = new Set(['cooked', 'steamed', 'grilled', 'roasted', 'baked', 'boiled', 'raw', 'fried', 'sauteed', 'sautéed', 'fresh', 'plain', 'scrambled', 'chopped', 'sliced']);
 const STOP = new Set(['of', 'some', 'the', 'my', 'fresh', 'homemade', 'plain', 'bowl', 'plate', 'glass', 'serving', 'servings', 'side']);
 const ALIAS = { toast: ['bread'], oatmeal: ['oats'], coffee: ['coffee', 'brewed'], yoghurt: ['yogurt'], pb: ['peanut', 'butter'], oj: ['orange', 'juice'], shake: ['whey'], whey: ['whey'] };
 
@@ -31,7 +32,7 @@ function gramsFor(r, q, unit) {
   if (unit === s.u) return q * per; if (VOL[unit] && VOL[s.u]) return q * per * VOL[unit] / VOL[s.u];
   if (['slice', 'piece', 'scoop'].includes(unit)) return q * per; return null;
 }
-function findFood(rows, words) {
+function findFood(rows, words, strict = false) {
   const has = (s, w) => s.includes(w) || (w.length > 3 && s.includes(w.replace(/ies$/, 'y').replace(/(?<!s)s$/, '')));
   const hit = t => {
     if (!t.length) return null; const c = rows.filter(r => t.every(w => has(r.lc, w))); if (!c.length) return null;
@@ -39,19 +40,20 @@ function findFood(rows, words) {
       return [r, (r[6] ? -200 : 0) + (r.lc.startsWith(t[0]) ? 0 : 40) + extra * 8 + r[0].length / 4 + (/raw|cooked|roasted|boiled|baked|brewed/.test(r.lc) ? -6 : 0)]; })
       .sort((a, b) => a[1] - b[1]).slice(0, 25).map(x => x[0]);
   };
-  const tries = [words, ...words.map((_, i) => words.filter((__, j) => j !== i)), words.slice(-1)];
+  const tries = strict ? [words] : [words, ...words.map((_, i) => words.filter((__, j) => j !== i)), words.slice(-1)];
   for (const t of tries) { const r = hit(t); if (r) return r; } return null;
 }
-export function parseMeal(rows, text) {
+// strict: every word must match (used to double-check AI estimates).
+export function parseMeal(rows, text, strict = false) {
   const parts = String(text).toLowerCase().replace(/[()]/g, ' ').split(/,|\n|;|\+|&|\band\b|\bwith\b/).map(x => x.trim()).filter(Boolean);
   const matched = [], missed = [];
   parts.forEach(part => {
     const w = part.replace(/(\d)([a-z])/g, '$1 $2').split(/\s+/).filter(Boolean); let q = num(w[0]); let i = q === null ? 0 : 1; if (q === null) q = 1;
     const q2 = num(w[i]); if (i === 1 && q2 !== null && q2 < 1) { q += q2; i++; }
     const unit = UNIT[w[i]]; if (unit) i++; if (w[i] === 'of') i++;
-    const words = w.slice(i).filter(x => !STOP.has(x)).flatMap(x => ALIAS[x] || [x]).map(x => x.replace(/[^a-z0-9%-]/g, '')).filter(Boolean);
+    const words = w.slice(i).filter(x => !STOP.has(x) && !(strict && COOK.has(x))).flatMap(x => ALIAS[x] || [x]).map(x => x.replace(/[^a-z0-9%-]/g, '')).filter(Boolean);
     if (!words.length) { missed.push(part); return; }
-    const cands = findFood(rows, words); if (!cands) { missed.push(part); return; }
+    const cands = findFood(rows, words, strict); if (!cands) { missed.push(part); return; }
     let r = null, g = null; for (const c of cands) { const x = gramsFor(c, q, unit); if (x !== null && x > 0) { r = c; g = x; break; } }
     if (!r && ({ cup: 240, tbsp: 15, tsp: 5 })[unit]) { r = cands[0]; g = q * ({ cup: 240, tbsp: 15, tsp: 5 })[unit]; }
     if (!r || !(g > 0) || g > 3000) { missed.push(part); return; }

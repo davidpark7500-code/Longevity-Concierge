@@ -1,4 +1,4 @@
-// Shared by the browser app and the server functions. Change rules here, in one place.
+// Single source of truth for coach rules. Used by the Supabase edge function AND imported by the browser app.
 
 export const CAPS = { coachDay: 40, coachBurst: 8, burstMin: 10, estDay: 15 };
 
@@ -25,9 +25,9 @@ export function estimatePrompt({ hasPhoto, text }) {
   return `You estimate protein and fiber for one meal so a wellness app can total them. This is nutrition information only, not medical or diet advice.
 ${hasPhoto ? 'A photo of the meal is attached. Estimate portions from what is visible.' : ''}
 ${text ? 'The person describes the meal as: """' + String(text).slice(0, 600) + '"""' : ''}
-Steps: 1) List each distinct food with a realistic portion in household units and an estimated weight in grams. 2) For each food call lookup_food with a short query, choose the closest match, and scale its per-100 g values by your gram estimate. If nothing matches, estimate from general knowledge.
-Reply with only JSON in this shape: {"items":[{"name":"Scrambled eggs","amount":"2 large","grams":100,"protein_g":10.0,"fiber_g":0,"source":"usda"}],"note":"one short sentence on any assumptions"}
-"source" is "usda" when the numbers came from lookup_food, otherwise "estimate". If no food can be identified, reply {"items":[],"note":"short reason"}.`;
+List each distinct food with a realistic portion in household units, an estimated weight in grams, and protein and fiber based on typical USDA values. Use plain generic food names (for example "chicken breast, roasted", "brown rice, cooked") so they can be matched to the USDA database.
+Reply with only JSON in this shape: {"items":[{"name":"Scrambled eggs","amount":"2 large","grams":100,"protein_g":10.0,"fiber_g":0}],"note":"one short sentence on any assumptions"}
+If no food can be identified, reply {"items":[],"note":"short reason"}.`;
 }
 
 // Pre-AI filter. Returns null when the message may go to the AI.

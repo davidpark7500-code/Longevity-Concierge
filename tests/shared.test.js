@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { prepare, parseMeal, lookup } from '../src/shared/foodsearch.js';
-import { preFilter } from '../src/shared/guardrails.js';
+import { preFilter } from '../supabase/functions/api/guardrails.js';
 
 const rows = prepare(JSON.parse(readFileSync(new URL('../src/data/foods.json', import.meta.url), 'utf8')));
 
