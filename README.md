@@ -31,24 +31,26 @@ Without Supabase settings the app runs in **demo mode** with sample data in the 
 5. **Project Settings → API**: copy the **Project URL**, the **anon public** key, and the **service_role** key (keep this one secret).
 
 ### 2. Vercel: put the app online
-1. vercel.com → **Add New → Project** → import `Longevity-Concierge` from GitHub → **Deploy** (defaults are fine).
-2. **Settings → Environment Variables**, add (see `.env.example`):
+vercel.com → **Add New → Project** → import `Longevity-Concierge` → **Deploy**. No environment variables are needed: the public Supabase address and anon key are built into `src/cloud.js`, and pushes to `main` redeploy automatically.
 
-   | Name | Value |
-   |---|---|
-   | `VITE_SUPABASE_URL` | Supabase Project URL |
-   | `VITE_SUPABASE_ANON_KEY` | Supabase anon public key |
-   | `SUPABASE_URL` | Supabase Project URL |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
-   | `ANTHROPIC_API_KEY` | from console.anthropic.com |
-   | `ANTHROPIC_MODEL` | `claude-haiku-5-5` |
-   | `APP_URL` | your app address |
-   | `APP_TIMEZONE` | `America/Chicago` |
-   | `AI_GLOBAL_DAILY_CAP` | `3000` |
-   | `VITE_CIRCLE_PRICE_LABEL` | `$25/month` |
-   | `VITE_BOOKING_URL` | optional Calendly link for Longevity 1:1s |
+Optional build settings: `VITE_CIRCLE_PRICE_LABEL` (default `$25/month`), `VITE_BOOKING_URL` (Calendly link for Longevity 1:1s).
 
-3. **Deployments → ⋯ → Redeploy** so the new settings take effect.
+### 2b. Server functions (Supabase Edge Functions)
+`supabase/functions/api` (coach, estimate, checkout, portal, admin, delete-account) and `supabase/functions/stripe-webhook`, both deployed with **Verify JWT off** (they check sign-in / Stripe signatures themselves).
+Redeploy with the Supabase CLI: `supabase functions deploy api --no-verify-jwt` (same for `stripe-webhook`).
+
+**Supabase → Edge Functions → Secrets** (Project Settings → Edge Functions):
+
+| Name | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | required for the coach and AI estimates (console.anthropic.com) |
+| `ANTHROPIC_MODEL` | optional, default `claude-haiku-5-5` |
+| `APP_TIMEZONE` | optional, default `America/Chicago` |
+| `AI_GLOBAL_DAILY_CAP` | optional, default `3000` |
+| `APP_URL` | optional, default the request origin |
+| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_CIRCLE`, `STRIPE_WEBHOOK_SECRET` | when Stripe is ready |
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to functions automatically.
 
 ### 3. Make yourself admin
 Sign up in the app with your email, then in Supabase **SQL Editor** run:
@@ -61,16 +63,16 @@ Refresh the app → **Plan → Admin** shows members, packages, groups, and flag
 ### 4. Stripe: Circle payments (when ready)
 1. Stripe → **Product catalog → Add product**: "The Circle", recurring monthly price. Copy the **price ID** (`price_...`).
 2. **Developers → API keys**: copy the **secret key**.
-3. **Developers → Webhooks → Add endpoint**: `https://YOUR-APP/api/stripe-webhook`
+3. **Developers → Webhooks → Add endpoint**: `https://ptsneanksrzmzurfxvph.supabase.co/functions/v1/stripe-webhook`
    Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy the **signing secret** (`whsec_...`).
 4. **Settings → Billing → Customer portal**: turn it on (lets members cancel or update cards).
-5. Add `STRIPE_SECRET_KEY`, `STRIPE_PRICE_CIRCLE`, `STRIPE_WEBHOOK_SECRET` in Vercel → Redeploy.
+5. Add `STRIPE_SECRET_KEY`, `STRIPE_PRICE_CIRCLE`, `STRIPE_WEBHOOK_SECRET` as Supabase Edge Function secrets (no redeploy needed).
 Test with Stripe test mode first (card `4242 4242 4242 4242`).
 
 ### 5. Before inviting real members
 - **Email:** Supabase's built-in email is for testing and only sends a few emails per hour. Set up custom SMTP (for example Resend) under **Authentication → SMTP Settings**.
 - **Vercel Pro** ($20/mo): the free plan is non-commercial only.
-- **Legal:** `public/privacy.html` and `public/terms.html` are drafts. Have the healthcare attorney finalize them and review the coach rules in `src/shared/guardrails.js`.
+- **Legal:** `public/privacy.html` and `public/terms.html` are drafts. Have the healthcare attorney finalize them and review the coach rules in `supabase/functions/api/guardrails.js`.
 - **Amway:** confirm the paid Circle and package language are approved.
 - **Photos:** the exercise images come from free-exercise-db; their original source isn't documented. Replace with your own before a big launch.
 
@@ -82,12 +84,12 @@ Test with Stripe test mode first (card `4242 4242 4242 4242`).
 |---|---|---|
 | Habits, food log, history, favorites | browser + `user_state` table | No |
 | Food finder + typed-meal matcher | `src/shared/foodsearch.js` (runs on the phone) | No |
-| AI coach | `api/coach.js` | Yes (Claude) |
-| Photo / AI meal estimates | `api/estimate.js` | Yes (Claude) |
+| AI coach | `supabase/functions/api/index.ts` | Yes (Claude) |
+| Photo / AI meal estimates | `supabase/functions/api/index.ts` | Yes (Claude) |
 | Community | `posts`, `cheers`, `groups` tables | No |
-| Circle subscription | `api/checkout.js`, `api/stripe-webhook.js` | Stripe fees |
+| Circle subscription | `supabase/functions/api`, `supabase/functions/stripe-webhook` | Stripe fees |
 
-**Guardrails** (`src/shared/guardrails.js`, enforced in `api/coach.js`):
+**Guardrails** (`supabase/functions/api/guardrails.js`, enforced in `supabase/functions/api/index.ts`):
 emergency and medical keyword filters before any AI call, strict coach rules, a second AI check on every reply (fails closed),
 40 coach messages/day and 8 per 10 minutes per member, 15 AI meal estimates/day, a global daily AI cap, and blocked replies saved to `flags` for review.
 
@@ -96,7 +98,7 @@ emergency and medical keyword filters before any AI call, strict coach rules, a 
 ## Local development
 ```bash
 npm install
-cp .env.example .env.local   # fill in values, or leave Supabase blank for demo mode
-npm run dev                  # frontend only; server functions need `vercel dev`
+npm run dev                  # talks to the live Supabase project; add ?demo to the URL for sample data
+supabase functions serve     # optional: run the server functions locally
 npm test
 ```
