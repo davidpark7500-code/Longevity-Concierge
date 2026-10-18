@@ -393,3 +393,14 @@ a.btn{text-decoration:none}
 .install-tile p{margin:0}
 .steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
 .steps li{padding-left:2px}
+
+/* Portrait only. Android installed app honors the manifest; iPhone can't be locked, so cover the screen in landscape on phones. */
+.rotate-lock{display:none}
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  .rotate-lock{display:flex;position:fixed;inset:0;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0f3b33;color:#eef1ea;font-family:var(--display);font-weight:800;font-size:20px;text-align:center}
+  .rotate-lock svg{transform:rotate(90deg);animation:lc-turn 1.6s ease-in-out infinite}
+  .rotate-lock p{margin:0}
+  body{overflow:hidden}
+}
+@keyframes lc-turn{0%,30%{transform:rotate(90deg)}60%,100%{transform:rotate(0deg)}}
+@media (prefers-reduced-motion:reduce){.rotate-lock svg{animation:none;transform:none}}

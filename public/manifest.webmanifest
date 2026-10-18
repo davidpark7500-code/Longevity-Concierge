@@ -4,6 +4,7 @@
   "description": "Small habits, big life.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#eef1ea",
   "theme_color": "#0f3b33",
   "icons": [
