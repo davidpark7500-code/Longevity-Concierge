@@ -12,6 +12,12 @@ import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
 import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
+// App feel on iOS: Safari ignores user-scalable=no, so block pinch and double-tap zoom here too.
+if (typeof document !== 'undefined') {
+  ['gesturestart', 'gesturechange'].forEach(e => document.addEventListener(e, ev => ev.preventDefault(), { passive: false }));
+  let lastTouch = 0;
+  document.addEventListener('touchend', ev => { const now = Date.now(); if (now - lastTouch < 300 && !ev.target.closest('input,textarea,select')) ev.preventDefault(); lastTouch = now; }, { passive: false });
+}
 
 const { DEMO } = cloud;
 
