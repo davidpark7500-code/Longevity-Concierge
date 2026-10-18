@@ -207,6 +207,7 @@ begin
   return 'ok';
 end $$;
 revoke execute on function public.bump_usage(uuid, text, text, int, int, int, int) from public, anon, authenticated;
+grant execute on function public.bump_usage(uuid, text, text, int, int, int, int) to service_role;
 
 -- ---------- Make yourself an admin (run after you sign up, with your email) ----------
 -- update public.profiles set is_admin = true, tier = 'longevity'
