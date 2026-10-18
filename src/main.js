@@ -701,7 +701,7 @@ function authScreen(msg = '') {
     <form class="tile auth-form" id="auth-form" ${nudge ? 'hidden' : ''}><label class="eyebrow" for="auth-email">Sign in or create your account</label>
       <input id="auth-email" class="inp" type="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
       <button class="btn sun" type="submit">Email me a sign-in code</button>
-      <p class="status">No password needed. We’ll email you a link and a 6-digit code.</p>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>
+      <p class="status">No password needed. We’ll email you a link and a sign-in code.</p>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p></div>`;
   requestAnimationFrame(paintAll);
   const skip = document.getElementById('skip-install');
@@ -718,15 +718,15 @@ function authScreen(msg = '') {
 function codeScreen(email, msg = '') {
   const f = document.querySelector('.auth-form') || app;
   f.outerHTML = `<form class="tile auth-form" id="code-form"><span class="eyebrow">Check your email</span>
-    <p>We sent a sign-in link and a 6-digit code to <b>${esc(email)}</b>. ${platform().standalone ? 'Type the code here. The link would open your browser instead of the app.' : 'Tap the link, or type the code here.'}</p>
-    <input id="auth-code" class="inp code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+    <p>We sent a sign-in link and a code to <b>${esc(email)}</b>. ${platform().standalone ? 'Type the code here. The link would open your browser instead of the app.' : 'Tap the link, or type the code here.'}</p>
+    <input id="auth-code" class="inp code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••••">
     <button class="btn sun" type="submit">Sign in</button>
     <button class="linkbtn" type="button" id="auth-back">Use a different email</button>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>`;
   document.getElementById('auth-code').focus();
   document.getElementById('auth-back').onclick = () => authScreen();
   document.getElementById('code-form').addEventListener('submit', async e => {
-    e.preventDefault(); const code = document.getElementById('auth-code').value.trim(); if (!/^\d{6}$/.test(code)) return;
-    try { const session = await cloud.verifyCode(email, code); if (session) startSession(session); }
+    e.preventDefault(); const code = document.getElementById('auth-code').value.trim(); const clean = code.replace(/\D/g, ''); if (clean.length < 6) return;
+    try { const session = await cloud.verifyCode(email, clean); if (session) startSession(session); }
     catch { codeScreen(email, 'That code didn’t work. Check the newest email, or request a new one.'); }
   });
 }
