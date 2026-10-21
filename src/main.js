@@ -751,14 +751,15 @@ function qrSvg(text) {
 function desktopScreen() {
   tabsEl.hidden = true; uid = 0;
   document.body.classList.add('desk-mode');
-  const url = location.origin.replace(/^https?:\/\/(www\.)?/, '');
+  const site = /longevityconcierge\.app$/.test(location.hostname) || /vercel\.app$/.test(location.hostname) ? 'https://longevityconcierge.app' : location.origin;
+  const url = site.replace(/^https?:\/\/(www\.)?/, '');
   app.innerHTML = `<div class="desk">
     <header class="top">${wordmark()}</header>
     <div class="desk-grid">
       <div class="tile hero halftone desk-hero"><canvas data-scene="dawn"></canvas>
         <div class="txt"><span class="eyebrow">Your wellness concierge</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
       <div class="tile desk-qr"><span class="eyebrow">Made for your phone</span>
-        <div class="qr">${qrSvg(location.origin + '/')}</div>
+        <div class="qr">${qrSvg(site + '/')}</div>
         <p class="desk-scan">Scan with your phone camera</p>
         <p class="desk-or">or type <b>${esc(url)}</b> into your phone’s browser</p></div>
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
