@@ -24,7 +24,10 @@ drop policy if exists "own state" on public.user_state;
 create policy "own state" on public.user_state for all using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists "groups readable" on public.groups;
-create policy "groups readable" on public.groups for select using ((select auth.role()) = 'authenticated');
+-- Group details (including the call link) are visible only to that group's members.
+create policy "groups readable" on public.groups for select using (
+  id = (select p.group_id from public.profiles p where p.id = (select auth.uid()))
+);
 
 drop policy if exists "read posts" on public.posts;
 create policy "read posts" on public.posts for select using (
