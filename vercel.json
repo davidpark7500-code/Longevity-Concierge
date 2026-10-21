@@ -5,9 +5,20 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "longevityconcierge.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "longevityconcierge.vercel.app"
+        }
+      ],
       "destination": "https://www.longevityconcierge.app/:path*",
       "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/j/:slug",
+      "destination": "/index.html"
     }
   ]
 }

@@ -144,25 +144,73 @@ async function portal(req: Request) {
   return json({ url: s.url });
 }
 
+// Admin: David (is_admin) sees every team; a concierge sees only their own team.
 async function adminRoute(req: Request) {
-  const { profile } = await requireUser(req);
-  if (!profile.is_admin) return fail('Admins only.', 403);
+  const { user, profile } = await requireUser(req);
+  const { data: self } = await db.from('concierges').select('*').eq('user_id', user.id).maybeSingle();
+  const all = !!profile.is_admin;
+  if (!all && !self) return fail('Admins only.', 403);
+  const team = all ? null : self.id;
+  const inTeam = async (memberId: string) => all || (await db.from('profiles').select('concierge_id').eq('id', memberId).single()).data?.concierge_id === team;
+  const groupInTeam = async (groupId: string) => all || (await db.from('groups').select('concierge_id').eq('id', groupId).single()).data?.concierge_id === team;
+
   if (req.method === 'GET') {
-    const [{ data: profiles }, { data: groups }, { data: flags }, usersRes] = await Promise.all([
-      db.from('profiles').select('id, first_name, tier, circle_active, group_id, is_admin, created_at').order('created_at', { ascending: false }).limit(500),
-      db.from('groups').select('*').order('created_at'),
-      db.from('flags').select('*').eq('reviewed', false).order('created_at', { ascending: false }).limit(100),
+    let pq = db.from('profiles').select('id, first_name, tier, circle_active, group_id, concierge_id, is_admin, created_at').order('created_at', { ascending: false }).limit(1000);
+    let gq = db.from('groups').select('*').order('created_at');
+    if (team) { pq = pq.eq('concierge_id', team); gq = gq.eq('concierge_id', team); }
+    const [{ data: profiles }, { data: groups }, { data: concierges }, usersRes] = await Promise.all([
+      pq, gq, all ? db.from('concierges').select('*').order('created_at') : Promise.resolve({ data: [self] }),
       db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     ]);
+    const ids = new Set((profiles || []).map((p: any) => p.id));
+    let fq = db.from('flags').select('*').eq('reviewed', false).order('created_at', { ascending: false }).limit(100);
+    const { data: flagRows } = await fq;
+    const flags = (flagRows || []).filter((f: any) => all || ids.has(f.user_id));
     const emails = Object.fromEntries((usersRes.data?.users || []).map((u: any) => [u.id, u.email]));
-    return json({ members: (profiles || []).map((p: any) => ({ ...p, email: emails[p.id] || '' })), groups: groups || [], flags: flags || [] });
+    const counts: Record<string, number> = {}; (profiles || []).forEach((p: any) => { counts[p.concierge_id] = (counts[p.concierge_id] || 0) + 1; });
+    return json({
+      scope: all ? 'all' : 'team', self: self || null,
+      concierges: (concierges || []).map((c: any) => ({ ...c, members: counts[c.id] || 0, login_email: c.user_id ? emails[c.user_id] || '' : '' })),
+      members: (profiles || []).map((p: any) => ({ ...p, email: emails[p.id] || '' })), groups: groups || [], flags,
+    });
   }
   const b = await req.json().catch(() => ({}));
-  if (b.action === 'setTier' && ['free', 'essentials', 'performance', 'longevity'].includes(b.tier)) await db.from('profiles').update({ tier: b.tier }).eq('id', b.id);
-  else if (b.action === 'setGroup') await db.from('profiles').update({ group_id: b.groupId || null }).eq('id', b.id);
-  else if (b.action === 'reviewFlag') await db.from('flags').update({ reviewed: true }).eq('id', b.id);
-  else if (b.action === 'setGroupCall') await db.from('groups').update({ next_call: String(b.nextCall || '').slice(0, 80), call_link: String(b.callLink || '').slice(0, 300) || null }).eq('id', b.id);
-  else return fail('Unknown action.');
+  if (b.action === 'setTier' && ['free', 'essentials', 'performance', 'longevity'].includes(b.tier)) {
+    if (!(await inTeam(b.id))) return fail('Not on your team.', 403);
+    await db.from('profiles').update({ tier: b.tier }).eq('id', b.id);
+  } else if (b.action === 'setGroup') {
+    if (!(await inTeam(b.id)) || (b.groupId && !(await groupInTeam(b.groupId)))) return fail('Not on your team.', 403);
+    await db.from('profiles').update({ group_id: b.groupId || null }).eq('id', b.id);
+  } else if (b.action === 'reviewFlag') {
+    const { data: f } = await db.from('flags').select('user_id').eq('id', b.id).single();
+    if (!f || !(await inTeam(f.user_id))) return fail('Not on your team.', 403);
+    await db.from('flags').update({ reviewed: true }).eq('id', b.id);
+  } else if (b.action === 'setGroupCall') {
+    if (!(await groupInTeam(b.id))) return fail('Not on your team.', 403);
+    const link = String(b.callLink || '').trim().slice(0, 300);
+    if (link && !/^https:\/\//.test(link)) return fail('Call links must start with https://');
+    await db.from('groups').update({ next_call: String(b.nextCall || '').slice(0, 80), call_link: link || null }).eq('id', b.id);
+  } else if (b.action === 'setContact') {
+    if (!self) return fail('Only concierges have a contact button.', 403);
+    const url = String(b.contactUrl || '').trim().slice(0, 300);
+    if (url && !/^(https:\/\/|sms:|tel:|mailto:)/.test(url)) return fail('Use a link starting with sms:, tel:, mailto: or https://');
+    await db.from('concierges').update({ contact_url: url || null, contact_label: String(b.contactLabel || '').trim().slice(0, 40) || null }).eq('id', self.id);
+  } else if (b.action === 'addConcierge') {
+    if (!all) return fail('Admins only.', 403);
+    const name = String(b.name || '').trim().slice(0, 60), slug = String(b.slug || '').trim().toLowerCase();
+    if (!name) return fail('Add their name.');
+    if (!/^[a-z0-9-]{2,30}$/.test(slug)) return fail('Link name: 2 to 30 lowercase letters, numbers or dashes.');
+    const url = String(b.contactUrl || '').trim().slice(0, 300);
+    if (url && !/^(https:\/\/|sms:|tel:|mailto:)/.test(url)) return fail('Contact link must start with sms:, tel:, mailto: or https://');
+    let uid: string | null = null;
+    if (b.email) {
+      const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      uid = (list?.users || []).find((u: any) => u.email?.toLowerCase() === String(b.email).toLowerCase())?.id || null;
+      if (!uid) return fail('No account with that email yet. Have them sign up in the app first, then add them.');
+    }
+    const { error } = await db.from('concierges').insert({ name, slug, user_id: uid, contact_url: url || null });
+    if (error) return fail(/duplicate|unique/i.test(error.message) ? 'That link name or login is already used.' : 'Couldn’t add that concierge.');
+  } else return fail('Unknown action.');
   return json({ ok: true });
 }
 

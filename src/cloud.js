@@ -13,8 +13,8 @@ export const sb = DEMO ? null : createClient(SB_URL, SB_KEY, { auth: { persistSe
 // ---------- Auth ----------
 export async function getSession() { return DEMO ? null : (await sb.auth.getSession()).data.session; }
 export function onAuth(cb) { if (!DEMO) sb.auth.onAuthStateChange((event, session) => cb(event, session)); }
-export async function sendLink(email) {
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin } });
+export async function sendLink(email, ref = '') {
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin, data: ref ? { ref } : undefined } });
   if (error) throw error;
 }
 export async function verifyCode(email, token) {
@@ -100,4 +100,17 @@ export async function setCheer(postId, on) {
 export async function deletePost(id) {
   const { error } = await sb.from('posts').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ---------- Concierge teams ----------
+export async function conciergeName(slug) {
+  if (DEMO || !slug) return null;
+  const { data } = await sb.rpc('concierge_public', { s: slug });
+  return data?.[0]?.name || null;
+}
+// Returns { mine: the member's concierge, self: the concierge row this user runs (if any) }
+export async function loadConcierges(uid, conciergeId) {
+  const { data } = await sb.from('concierges').select('id, slug, name, contact_url, contact_label, user_id');
+  const rows = data || [];
+  return { mine: rows.find(r => r.id === conciergeId) || null, self: rows.find(r => r.user_id === uid) || null };
 }

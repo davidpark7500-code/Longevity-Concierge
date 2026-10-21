@@ -79,7 +79,13 @@ const FOODS = prepare(FOOD_ROWS);
 const EX = EX_RAW.map(e => ({ ...e, i: e.i.map(p => '/' + p.replace(/^\//, '')) }));
 
 /* ---------------- Session + state ---------------- */
-let user = null, profile = null, groupInfo = null;
+let user = null, profile = null, groupInfo = null, myConcierge = null, selfConcierge = null;
+// Referral: /j/<slug> or ?ref=<slug>. Remembered on this device until sign-up.
+const REF = (() => {
+  const m = location.pathname.match(/^\/j\/([a-z0-9-]{2,30})\/?$/i), q = new URLSearchParams(location.search).get('ref');
+  const r = (m?.[1] || q || '').toLowerCase();
+  try { if (r) localStorage.setItem('lc-ref', r); return r || localStorage.getItem('lc-ref') || ''; } catch { return r; }
+})();
 let state = blankState();
 const app = document.getElementById('app');
 const tabsEl = document.getElementById('tabs');
@@ -271,8 +277,9 @@ function plan() {
       <div class="circle-status">${circleLine}</div>
       ${tier === 'longevity' && BOOKING_URL ? `<a class="btn sun" href="${esc(BOOKING_URL)}" target="_blank" rel="noopener">Book your monthly 1:1</a>` : ''}</div>
     ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">Package</span><b class="hv">${TIERS[k].name}</b>${list(TIERS[k].items)}</div>`).join('')}
-    <div class="tile lilac provider s4"><span class="eyebrow">How packages work</span><b class="hv">Ask us to switch</b><p>Packages are product bundles we order for you. Message your concierge to start or change one, and your app updates to match.</p></div>
-    ${profile?.is_admin ? '<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">Admin</span><span class="ft-q hv">Members &amp; flags</span></button>' : ''}
+    <div class="tile lilac provider s4"><span class="eyebrow">Your concierge</span><b class="hv">${esc(myConcierge?.name || 'Your concierge')}</b><p>Packages are product bundles your concierge orders for you. Reach out to start or change one, and your app updates to match.</p>
+      ${myConcierge?.contact_url ? `<a class="btn" href="${esc(myConcierge.contact_url)}" ${/^https:/.test(myConcierge.contact_url) ? 'target="_blank" rel="noopener"' : ''}>${esc(myConcierge.contact_label || 'Contact ' + (myConcierge.name || '').split(' ')[0])}</a>` : ''}</div>
+    ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease.</p>
   </div>`;
 }
@@ -696,19 +703,35 @@ async function openAdmin() {
     try {
       const d = await cloud.api('/api/admin', null, 'GET');
       const gname = id => (d.groups.find(g => g.id === id) || {}).name || '—';
+      const cname = id => (d.concierges.find(c => c.id === id) || {}).name || '—';
       box.innerHTML = `
+        <p class="status">${d.scope === 'all' ? 'You see every team.' : 'You see your team only.'}</p>
+        ${d.scope === 'all' ? `<div class="flabel">Concierges (${d.concierges.length})</div>
+        ${d.concierges.map(c => `<div class="tile adm-group"><b>${esc(c.name)}${c.is_house ? ' · house team' : ''}</b><small>Join link: ${esc(location.host.replace(/^www\./, ''))}/j/${esc(c.slug)} · ${c.members} members${c.login_email ? ' · login ' + esc(c.login_email) : ' · no login linked'}</small></div>`).join('')}
+        <div class="tile adm-group"><b>Add a concierge</b>
+          <input class="inp" id="cn-name" maxlength="60" placeholder="Full name (shown to their members)">
+          <input class="inp" id="cn-slug" maxlength="30" placeholder="Link name, e.g. sarah" autocapitalize="none" autocorrect="off">
+          <input class="inp" id="cn-email" type="email" placeholder="Their login email (they sign up first)" autocapitalize="none">
+          <input class="inp" id="cn-url" placeholder="Contact link: sms:+15555551234, mailto:…, or https://…" autocapitalize="none">
+          <button class="btn" id="cn-add">Add concierge</button></div>` : ''}
+        ${d.self ? `<div class="flabel">Your contact button</div><div class="tile adm-group"><small>Your join link: ${esc(location.host.replace(/^www\./, ''))}/j/${esc(d.self.slug)}</small>
+          <input class="inp" id="me-url" value="${esc(d.self.contact_url || '')}" placeholder="sms:+15555551234, mailto:…, or https://…" autocapitalize="none">
+          <input class="inp" id="me-label" maxlength="40" value="${esc(d.self.contact_label || '')}" placeholder="Button text, e.g. Text Sarah">
+          <button class="btn alt" id="me-save">Save</button></div>` : ''}
         <div class="flabel">Flagged coach replies (${d.flags.length})</div>
         ${d.flags.length ? d.flags.map(f => `<div class="tile adm-flag"><small>${new Date(f.created_at).toLocaleString()}</small><p><b>Asked:</b> ${esc(f.question)}</p><p><b>Blocked reply:</b> ${esc(f.reply)}</p><p><b>Why:</b> ${esc(f.reason)}</p><button class="btn alt" data-review="${f.id}">Mark reviewed</button></div>`).join('') : '<p class="status">Nothing to review.</p>'}
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
         <div class="flabel">Members (${d.members.length})</div>
-        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · Circle subscriber' : ''} · group: ${esc(gname(m.group_id))}</small>
+        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · Circle subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></div>`).join('')}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
   s.addEventListener('click', async e => {
     if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     const r = e.target.closest('[data-review]'); if (r) { await cloud.api('/api/admin', { action: 'reviewFlag', id: Number(r.dataset.review) }).catch(err => toast(err.message)); load(); return; }
+    if (e.target.closest('#cn-add')) { const v = id => s.querySelector(id).value.trim(); await cloud.api('/api/admin', { action: 'addConcierge', name: v('#cn-name'), slug: v('#cn-slug').toLowerCase(), email: v('#cn-email').toLowerCase(), contactUrl: v('#cn-url') }).then(() => { toast('Concierge added'); load(); }).catch(err => toast(err.message)); return; }
+    if (e.target.closest('#me-save')) { await cloud.api('/api/admin', { action: 'setContact', contactUrl: s.querySelector('#me-url').value.trim(), contactLabel: s.querySelector('#me-label').value.trim() }).then(() => toast('Saved')).catch(err => toast(err.message)); return; }
     const g = e.target.closest('[data-gsave]'); if (g) { const id = g.dataset.gsave; await cloud.api('/api/admin', { action: 'setGroupCall', id, nextCall: s.querySelector(`[data-gcall="${id}"]`).value, callLink: s.querySelector(`[data-glink="${id}"]`).value }).then(() => toast('Saved')).catch(err => toast(err.message)); }
   });
   s.addEventListener('change', async e => { const t = e.target.closest('[data-tier]'); if (t) { await cloud.api('/api/admin', { action: 'setTier', id: t.dataset.tier, tier: t.value }).then(() => toast('Package updated')).catch(err => toast(err.message)); load(); } });
@@ -759,7 +782,7 @@ function desktopScreen() {
       <div class="tile hero halftone desk-hero"><canvas data-scene="dawn"></canvas>
         <div class="txt"><span class="eyebrow">Your wellness concierge</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
       <div class="tile desk-qr"><span class="eyebrow">Made for your phone</span>
-        <div class="qr">${qrSvg(site + '/')}</div>
+        <div class="qr">${qrSvg(site + (REF ? '/j/' + REF : '/'))}</div>
         <p class="desk-scan">Scan with your phone camera</p>
         <p class="desk-or">or type <b>${esc(url)}</b> into your phone’s browser</p></div>
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
@@ -792,6 +815,7 @@ function authScreen(msg = '') {
     <form class="tile auth-form" id="auth-form" ${nudge ? 'hidden' : ''}><label class="eyebrow" for="auth-email">Sign in or create your account</label>
       <input id="auth-email" class="inp" type="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
       <button class="btn sun" type="submit">Email me a sign-in code</button>
+      <p class="status" id="team-line" hidden></p>
       <p class="status">No password needed. We’ll email you a link and a sign-in code.</p>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p></div>`;
   requestAnimationFrame(paintAll);
@@ -799,10 +823,11 @@ function authScreen(msg = '') {
   if (skip) skip.onclick = () => { try { sessionStorage.setItem('lc-skip-install', '1'); } catch { /* storage blocked */ } document.querySelector('.install-tile').remove(); document.getElementById('auth-form').hidden = false; };
   const nat = document.querySelector('[data-native-install]');
   if (nat) nat.onclick = async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice.catch(() => null); installEvt = null; nat.hidden = true; if (r?.outcome === 'accepted') toast('Installed. Open LongevityCo from your home screen.'); };
+  if (REF) cloud.conciergeName(REF).then(n => { const el = document.getElementById('team-line'); if (n && el) { el.innerHTML = `You’re joining <b>${esc(n)}</b>’s team.`; el.hidden = false; } }).catch(() => {});
   document.getElementById('auth-form').addEventListener('submit', async e => {
     e.preventDefault(); const email = document.getElementById('auth-email').value.trim().toLowerCase(); if (!email) return;
     const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Sending…';
-    try { await cloud.sendLink(email); codeScreen(email); }
+    try { await cloud.sendLink(email, REF); codeScreen(email); }
     catch (err) { authScreen(/rate/i.test(err.message) ? 'Too many emails sent. Wait a minute and try again.' : err.message); }
   });
 }
@@ -852,6 +877,7 @@ async function startSession(session) {
   const params = new URLSearchParams(location.search);
   if (params.get('circle') === 'joined') { state.tab = 'circle'; toast('Welcome to the Circle!'); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
   if (params.has('circle')) history.replaceState(null, '', location.pathname);
+  try { const c = await cloud.loadConcierges(user.id, profile.concierge_id); myConcierge = c.mine; selfConcierge = c.self; } catch (e) { console.error(e); }
   if (!profile.first_name || !profile.accepted_at) return onboarding();
   render();
 }
