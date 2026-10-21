@@ -152,10 +152,10 @@ function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good mor
 /* ---------------- Today ---------------- */
 function habitTile(h, wide) {
   const n = Math.min(counts()[h.id] || 0, h.goal), done = n >= h.goal;
-  return `<button class="tile habit ${wide ? 's4 wide' : 's2'} ${done ? 'complete' : ''}" data-habit="${h.id}" id="habit-${h.id}" aria-label="Log ${h.name}, ${n} of ${h.goal} ${h.unit}">
+  return `<button class="tile habit ${wide ? 's4 wide' : 's2'} ${done ? 'complete' : ''} ${done && animFrom?.justDone && animFrom.id === h.id ? 'just-done' : ''}" data-habit="${h.id}" id="habit-${h.id}" aria-label="Log ${h.name}, ${n} of ${h.goal} ${h.unit}">
     <span class="hico">${icon(done ? 'check' : h.id)}</span><span class="hname">${h.name}</span>
     <span class="hcount"><b class="hv">${n}</b><span>/ ${h.goal} ${h.unit}</span></span>
-    <span class="bar"><i style="width:${n / h.goal * 100}%"></i></span></button>`;
+    <span class="bar"><i style="width:${(animFrom && animFrom.id === h.id ? animFrom.n : n) / h.goal * 100}%" data-w="${n / h.goal * 100}%"></i></span></button>`;
 }
 function today() {
   const p = pct(), c = counts(), done = HABITS.filter(h => (c[h.id] || 0) >= h.goal).length;
@@ -173,9 +173,9 @@ function today() {
       <div class="txt"><span class="eyebrow">${DAYS[new Date().getDay()]}</span>
       <h1 class="mix"><span class="lt">${greeting()}</span><span class="hv">${esc(firstName())}.</span></h1></div>
       ${badge('LIVE STRONGER • LIVE LONGER • ')}</div>
-    <div class="tile dark ringt s2 r2"><span class="eyebrow">Today</span>
+    <div class="tile dark ringt s2 r2 ${animFrom?.perfect ? 'celebrate' : ''}"><span class="eyebrow">Today</span>${animFrom?.perfect ? '<span class="rays" aria-hidden="true"></span>' : ''}
       <div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-opacity=".14" stroke-width="12"/>
-        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--sun)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .6s"/></svg>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--sun)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${animFrom ? C * (1 - animFrom.pct / 100) : off}" data-off="${off}" class="ring-fill"/></svg>
         <div class="rv"><b class="hv">${p}</b><span>%</span></div></div>
       <div><p class="hand mood">${mood}</p><small>${done} of ${HABITS.length} habits done</small></div></div>
     <div class="tile butter streak s2">${sun()}<span class="eyebrow">Streak</span><b class="hv">${st}</b><span class="hand">${st === 1 ? 'day' : 'days'} in a row</span></div>
@@ -301,18 +301,65 @@ function paint(cv) {
 const paintAll = () => document.querySelectorAll('canvas[data-scene]').forEach(paint);
 
 /* ---------------- Render ---------------- */
+let animFrom = null, entered = false;
 function render() {
   uid = 0; prune();
   tabsEl.hidden = false;
   app.innerHTML = ({ today, food, learn, circle, plan }[state.tab] || today)();
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === state.tab));
   requestAnimationFrame(paintAll);
+  if (animFrom) { animFrom = null; requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('.ring-fill[data-off]').forEach(r => r.setAttribute('stroke-dashoffset', r.dataset.off));
+    document.querySelectorAll('.bar i[data-w]').forEach(b => { b.style.width = b.dataset.w; }); })); }
+  if (!entered) { entered = true; const b = app.querySelector('.bento'); if (b) { b.classList.add('enter'); [...b.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 8))); setTimeout(() => b.classList.remove('enter'), 900); } }
   if (state.tab === 'circle') loadFeed();
 }
 let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(paintAll, 150); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintAll);
-function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
-function sheet(html, cls = 'panel tall') { const s = document.createElement('div'); s.className = 'sheet'; s.innerHTML = `<div class="${cls}" role="dialog">${html}</div>`; document.body.appendChild(s); return s; }
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('in')));
+  setTimeout(() => { t.classList.remove('in'); setTimeout(() => t.remove(), 220); }, 2200);
+}
+const buzz = p => { try { navigator.vibrate?.(p); } catch { /* not supported */ } };
+// Bottom sheet: slides up from the bottom edge, leaves the same way, and can be dragged down to dismiss.
+function sheet(html, cls = 'panel tall') {
+  const s = document.createElement('div'); s.className = 'sheet';
+  s.innerHTML = `<div class="${cls}" role="dialog" aria-modal="true"><span class="grab" aria-hidden="true"></span>${html}</div>`;
+  document.body.appendChild(s); document.body.classList.add('sheet-open');
+  const panel = s.firstElementChild;
+  requestAnimationFrame(() => requestAnimationFrame(() => s.classList.add('open')));
+  s.close = () => {
+    if (s.closing) return; s.closing = true;
+    panel.style.transition = ''; panel.style.transform = '';
+    s.classList.remove('open'); s.classList.add('closing');
+    const done = () => { s.remove(); if (!document.querySelector('.sheet')) document.body.classList.remove('sheet-open'); };
+    panel.addEventListener('transitionend', done, { once: true }); setTimeout(done, 320);
+  };
+  const onKey = e => { if (e.key === 'Escape' && document.body.contains(s)) { s.close(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
+  // Drag to dismiss: grab the handle or header. Tracks 1:1, resists upward, dismisses on distance or a quick flick.
+  let y0 = 0, t0 = 0, dy = 0, hist = [], dragging = false;
+  panel.addEventListener('pointerdown', e => {
+    if (!e.target.closest('.grab, .panel > header') || e.target.closest('button, a, input, select, textarea')) return;
+    dragging = true; y0 = e.clientY; t0 = performance.now(); dy = 0; hist = [[t0, 0]];
+    panel.setPointerCapture(e.pointerId); panel.style.transition = 'none';
+  });
+  panel.addEventListener('pointermove', e => {
+    if (!dragging) return; const raw = e.clientY - y0;
+    dy = raw >= 0 ? raw : -(Math.abs(raw) * 60) / (60 + Math.abs(raw)); // rubber-band past the top
+    panel.style.transform = `translateY(${dy}px)`; hist.push([performance.now(), dy]); if (hist.length > 6) hist.shift();
+  });
+  const end = () => {
+    if (!dragging) return; dragging = false;
+    const [ta, ya] = hist[0], [tb, yb] = hist[hist.length - 1], v = (yb - ya) / Math.max(1, tb - ta); // px per ms
+    if (dy > panel.offsetHeight * 0.25 || (v > 0.11 && dy > 8)) { panel.style.transition = ''; s.close(); return; }
+    panel.style.transition = ''; panel.style.transform = '';
+  };
+  panel.addEventListener('pointerup', end); panel.addEventListener('pointercancel', end);
+  return s;
+}
 
 /* ---------------- Clicks ---------------- */
 document.addEventListener('click', async e => {
@@ -320,8 +367,11 @@ document.addEventListener('click', async e => {
   const tab = e.target.closest('.tab'); if (tab) { state.tab = tab.dataset.tab; save(); render(); window.scrollTo(0, 0); return; }
   if (foodClicks(e)) return;
   const h = e.target.closest('[data-habit]');
-  if (h) { const def = HABITS.find(x => x.id === h.dataset.habit), before = pct(), c = counts(); let n = (c[def.id] || 0) + 1; if (n > def.goal) n = 0; c[def.id] = n; save(); render();
-    if (n === def.goal) toast(pct() === 100 && before < 100 ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
+  if (h) { const def = HABITS.find(x => x.id === h.dataset.habit), before = pct(), c = counts(), prevN = c[def.id] || 0; let n = prevN + 1; if (n > def.goal) n = 0; c[def.id] = n; save();
+    animFrom = { pct: before, id: def.id, n: Math.min(prevN, def.goal), justDone: n === def.goal, perfect: pct() === 100 && before < 100 };
+    buzz(n === def.goal ? [10, 30, 14] : 8);
+    render();
+    if (n === def.goal) toast(animFrom?.perfect || (pct() === 100 && before < 100) ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
   const c = e.target.closest('[data-cat]'); if (c) { state.cat = c.dataset.cat; save(); render(); return; }
   const fd = e.target.closest('[data-feed]'); if (fd && !fd.disabled) { state.feed = fd.dataset.feed; save(); render(); return; }
   const ch = e.target.closest('[data-cheer]'); if (ch) return toggleCheer(ch.dataset.cheer);
@@ -383,7 +433,7 @@ function openMoves(start) {
       <div class="mvgrid">${EX.map((e, i) => [e, i]).filter(([e]) => e.g === st.g).map(([e, i]) => `<button class="mvcard" data-move="${i}">${mvimg(e)}<b>${esc(e.n)}</b><small>${esc(e.m.join(', '))}</small></button>`).join('')}</div>`; }
     body.scrollTop = 0;
   }
-  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.remove(); return; }
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     const g = e.target.closest('[data-g]'); if (g) { st.g = g.dataset.g; draw(); return; }
     const m = e.target.closest('[data-move]'); if (m) { st.sel = Number(m.dataset.move); draw(); return; }
     if (e.target.closest('[data-back]')) { st.sel = null; draw(); } });
@@ -489,7 +539,7 @@ function openFinder(mode) {
       <div class="fbar"><i style="width:${v === null ? 0 : Math.max(2, v / max * 100)}%"></i></div></div>`; }).join('');
   }
   let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = inp.value; draw(); list.scrollTop = 0; }, 120); });
-  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.remove(); return; }
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     const m = e.target.closest('[data-m]'); if (m) { st.mode = m.dataset.m; draw(); }
     const p = e.target.closest('[data-per]'); if (p) { st.per = p.dataset.per; draw(); }
     const a = e.target.closest('[data-add]'); if (a) { const r = FOODS[Number(a.dataset.add)]; if (r) { addMeal(`${r[0]} (${r[5]})`, r[2] * r[4] / 100, r[3] * r[4] / 100); toast('Added to today’s log'); } } });
@@ -564,13 +614,13 @@ function openLogger(mode) {
     } catch (err) { est.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
     finally { busy = false; go.disabled = false; }
   }
-  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.remove(); return; }
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     if (e.target.closest('#meal-estimate')) { estimate(false); return; }
     if (e.target.closest('#meal-fill')) { estimate(true); return; }
     if (e.target.closest('[data-clear]')) { photo = null; file.value = ''; prev.hidden = true; prev.innerHTML = ''; return; }
     const rm = e.target.closest('[data-rm]'); if (rm && pending) { pending.items.splice(Number(rm.dataset.rm), 1); renderEst(); return; }
     if (e.target.closest('#meal-save') && pending && pending.items.length) { const P = pending.items.reduce((a, x) => a + x.protein, 0), F = pending.items.reduce((a, x) => a + x.fiber, 0);
-      addMeal(pending.text || pending.items.map(x => x.name).join(', '), P, F, pending.items); s.remove(); toast('Meal logged!'); } });
+      addMeal(pending.text || pending.items.map(x => x.name).join(', '), P, F, pending.items); s.close(); toast('Meal logged!'); } });
 }
 
 /* ---------------- Coach ---------------- */
@@ -610,7 +660,7 @@ function openCoach() {
     } catch (err) { typing.remove(); turns.pop(); add('bot note', esc(err.message)); }
     finally { busy = false; }
   }
-  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) s.remove(); const q = e.target.closest('[data-q]'); if (q) send(q.dataset.q); });
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) s.close(); const q = e.target.closest('[data-q]'); if (q) send(q.dataset.q); });
   s.querySelector('#ask').addEventListener('submit', e => { e.preventDefault(); send(inp.value); inp.value = ''; });
   setTimeout(() => inp.focus(), 50);
 }
@@ -629,7 +679,7 @@ function openAccount() {
         <button class="btn alt" id="acct-del">Delete my account</button><div id="acct-confirm"></div></div>`}
     </div>`);
   s.addEventListener('click', async e => {
-    if (e.target === s || e.target.closest('.x')) { s.remove(); return; }
+    if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     if (e.target.closest('#acct-save')) { const v = s.querySelector('#acct-name').value.trim().slice(0, 40); if (!v) return; try { await cloud.saveProfile(user.id, { first_name: v }); profile.first_name = v; toast('Saved'); render(); } catch { toast('Couldn’t save. Try again.'); } return; }
     if (e.target.closest('#acct-signout')) { await cloud.flushSave(); await cloud.signOut(); location.reload(); return; }
     if (e.target.closest('#acct-del')) { s.querySelector('#acct-confirm').innerHTML = '<p class="status">Type DELETE to confirm.</p><div class="btnrow"><input id="del-word" class="inp" autocomplete="off"><button class="btn" id="del-go">Delete forever</button></div>'; return; }
@@ -657,7 +707,7 @@ async function openAdmin() {
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
   s.addEventListener('click', async e => {
-    if (e.target === s || e.target.closest('.x')) { s.remove(); return; }
+    if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     const r = e.target.closest('[data-review]'); if (r) { await cloud.api('/api/admin', { action: 'reviewFlag', id: Number(r.dataset.review) }).catch(err => toast(err.message)); load(); return; }
     const g = e.target.closest('[data-gsave]'); if (g) { const id = g.dataset.gsave; await cloud.api('/api/admin', { action: 'setGroupCall', id, nextCall: s.querySelector(`[data-gcall="${id}"]`).value, callLink: s.querySelector(`[data-glink="${id}"]`).value }).then(() => toast('Saved')).catch(err => toast(err.message)); }
   });
