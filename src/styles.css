@@ -23,7 +23,10 @@
   --on-pastel:#10201b; --tape:rgba(255,255,255,.2); --glass:rgba(255,255,255,.4); --grain:.12; --shadow:0 14px 30px -20px rgba(0,0,0,.9); color-scheme:dark}
 
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{min-height:100%}
+html{background:var(--bg)}
+/* iPhone home-screen app with a see-through status bar: without this the page stops one status-bar height short, leaving a blank strip at the bottom */
+html,body{min-height:calc(100% + env(safe-area-inset-top,0px))}
 /* App feel: no sideways drift, no pinch/double-tap zoom, no rubber-band bounce, no zoom-on-focus */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden;overscroll-behavior:none;touch-action:pan-x pan-y}
 body{overflow-x:hidden;overscroll-behavior-y:none;max-width:100vw;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
@@ -315,6 +318,9 @@ body.sheet-open{overflow:hidden}
 .mvbtn{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600;line-height:1.2}
 .mvimg{position:relative;display:block;aspect-ratio:3/2;max-width:100%;border-radius:14px;overflow:hidden;background:#fff}
 .mvimg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mvimg.big{aspect-ratio:auto;background:#fff}
+.mvimg.big img{position:relative;height:auto;object-fit:contain;display:block}
+.mvimg.big img.f2{position:absolute;top:0;left:0}
 .mvimg img.f2{animation:flip 2.4s steps(1) infinite}
 @keyframes flip{0%{opacity:0}50%{opacity:1}}
 .mvstrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
