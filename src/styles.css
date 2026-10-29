@@ -505,3 +505,7 @@ body.sheet-open .toast.in{transform:translate(-50%,0)}
 
 .mperks{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}.tile.dark .mperks{border-top-color:rgba(255,255,255,.15)}.mperks .eyebrow{font-size:11px}
 .mnote{font-size:12px;opacity:.75;line-height:1.35}
+.pact.locked .hico{opacity:.85}.pact.locked b{opacity:.95}
+.req-note{font-weight:600;color:var(--ink)!important}
+.adm-mem.waiting{border:2px solid var(--sun)}
+.plan:not(.feat-pkg) > .btn{align-self:flex-start;margin-top:auto}

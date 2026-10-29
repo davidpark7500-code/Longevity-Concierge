@@ -61,3 +61,8 @@ create index if not exists cheers_user_idx   on public.cheers (user_id);
 create index if not exists flags_user_idx    on public.flags (user_id);
 create index if not exists posts_user_idx    on public.posts (user_id);
 create index if not exists profiles_group_idx on public.profiles (group_id);
+
+-- Package requests: member taps "Ask about <package>", concierge sees who's waiting.
+alter table public.profiles add column if not exists requested_tier text check (requested_tier in ('essentials','performance','longevity'));
+alter table public.profiles add column if not exists requested_at timestamptz;
+grant update (requested_tier, requested_at) on public.profiles to authenticated;

@@ -104,7 +104,18 @@ const firstName = () => (profile && profile.first_name) || 'friend';
 const hasCircle = () => !!profile && (profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier));
 const tierKey = () => (profile && profile.tier) || 'free';
 const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
-const contactBtn = (cls = 'btn', text) => { const c = concierge(); return c.contact ? `<a class="${cls}" href="${esc(c.contact)}" ${/^https:/.test(c.contact) ? 'target="_blank" rel="noopener"' : ''}>${esc(text || c.label)}</a>` : ''; };
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function withBody(url, body) {
+  if (!body) return url;
+  if (/^sms:/.test(url)) return url + (isIOS() ? '&' : '?') + 'body=' + encodeURIComponent(body);
+  if (/^mailto:/.test(url)) return url + (url.includes('?') ? '&' : '?') + 'body=' + encodeURIComponent(body);
+  return url;
+}
+const whoAmI = () => { const n = profile?.first_name || ''; const e = user?.email || ''; return n && e ? `${n} (${e})` : n || e; };
+const msg = s => `Hi! This is ${whoAmI() || 'a Longevity Concierge member'}. ${s}`;
+const contactBtn = (cls = 'btn', text, body, req) => { const c = concierge(); return c.contact ? `<a class="${cls}" href="${esc(withBody(c.contact, body))}" ${req ? `data-req="${esc(req)}"` : ''} ${/^https:/.test(c.contact) ? 'target="_blank" rel="noopener"' : ''}>${esc(text || c.label)}</a>` : ''; };
+
+const waiting = m => !!(m.requested_tier && PACKAGES[m.requested_tier] && !PACKAGES[m.tier]);
 
 /* ---------------- Dates, days, streaks ---------------- */
 function dayKeyOf(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
@@ -216,7 +227,7 @@ function reorderLine() {
   const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';
   const left = Math.round((new Date(state.pkgOrdered + 'T12:00:00') - new Date()) / 864e5) + pk.reorderDays;
   if (left > 5) return '';
-  return `<p class="reorder">${left > 0 ? `About ${left} day${left === 1 ? '' : 's'} left in this order.` : 'Time to reorder.'} ${contactBtn('linkbtn', 'Reorder with ' + concierge().name + ' →')}</p>`;
+  return `<p class="reorder">${left > 0 ? `About ${left} day${left === 1 ? '' : 's'} left in this order.` : 'Time to reorder.'} ${contactBtn('linkbtn', 'Reorder with ' + concierge().name + ' →', msg(`I’m ready to reorder my ${pk.name} package.`))}</p>`;
 }
 function conciergeTile() {
   const c = concierge();
@@ -302,6 +313,7 @@ function pactProgress(p) {
 function renderPacts() {
   const el = document.getElementById('pacts'); if (!el || !pactData) return;
   if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.challenges.toLowerCase()} yet.</p>`; return; }
+  const teaser = hasCircle() ? '' : `<div class="tile pact dark locked"><div class="pact-top"><span class="hico">${icon('lock')}</span><span class="pill-k">Package members</span></div><b>Circle: 30-day reset</b><small>All five daily habits, every day, with the Circle.</small><small class="pstat">Unlocks with Ease, Endure or Elevate</small><button class="btn sun" data-tabgo="plan">See packages</button></div>`;
   el.innerHTML = pactData.pacts.map(p => {
     const pr = pactProgress(p), st = pactData.stats[p.id] || [0, 0];
     const action = !pr ? `<button class="btn" data-pact="${esc(p.id)}" data-do="join">Join</button>`
@@ -312,7 +324,7 @@ function renderPacts() {
       <b>${esc(p.title)}</b><small>${esc(p.goal)}</small>
       ${pr ? `<span class="bar"><i style="width:${pr.done / p.days * 100}%"></i></span><small>Day ${pr.dayN} of ${p.days} · ${pr.done} check-in${pr.done === 1 ? '' : 's'}</small>` : `<small class="pstat">${st[0]} joined${st[1] ? ` · ${st[1]} checked in today` : ''} · ${p.days} days</small>`}
       ${action}</div>`;
-  }).join('');
+  }).join('') + teaser;
 }
 async function pactAction(id, what) {
   const p = pactData && pactData.pacts.find(x => String(x.id) === String(id)); if (!p) return;
@@ -364,9 +376,9 @@ function plan() {
     ${pk ? current + conciergeTile() : ''}
     <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'Pick a'}</span><span class="lt">${pk ? 'packages' : 'package'}</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
     ${featuredTile(others, tier)}
-    ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${perksBlock(PACKAGES[k])}</div>`).join('')}
-    ${pk ? '' : `<div class="tile paper free-line s4"><span class="eyebrow">You’re on Free</span><p>${TIERS.free.items.map(esc).join(' · ')}</p><div class="circle-status">${keptLine}</div></div>` + conciergeTile()}
-    <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
+    ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${perksBlock(PACKAGES[k])}${contactBtn('btn', 'Ask about ' + PACKAGES[k].name, msg(`I’d like the ${PACKAGES[k].name} package.`), k)}</div>`).join('')}
+    ${pk ? '' : `<div class="tile paper free-line s4"><span class="eyebrow">You’re on Free</span>${profile?.requested_tier && PACKAGES[profile.requested_tier] ? `<p class="req-note">You asked about ${esc(PACKAGES[profile.requested_tier].name)}. ${esc(c.name[0].toUpperCase() + c.name.slice(1))} will set it up and it’ll show here.</p>` : ''}<p>${TIERS.free.items.map(esc).join(' · ')}</p><div class="circle-status">${keptLine}</div></div>` + conciergeTile()}
+    <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it', msg('I’d like to know more about adding Valdura for my bloodwork.'))}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
   </div>`;
@@ -378,7 +390,7 @@ function featuredTile(others, tier) {
   const why = m.off ? `The ${money(m.off)} member discount applies, and ${NAMES.paidThe} is included.` : `Includes ${NAMES.paidThe}.`;
   return `<div class="tile dark plan feat-pkg s4"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, false)}
     <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${perksBlock(pk)}
-    ${contactBtn('btn sun', 'Ask about ' + pk.name)}</div>`;
+    ${contactBtn('btn sun', 'Ask about ' + pk.name, msg(`I’d like the ${pk.name} package.`), FEATURED.key)}</div>`;
 }
 function priceBlock(pk, full) {
   const m = monthly(pk);
@@ -490,6 +502,7 @@ document.addEventListener('click', async e => {
     render();
     if (n === def.goal) toast(animFrom?.perfect || (pct() === 100 && before < 100) ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
   const pc = e.target.closest('[data-pkg]'); if (pc) { const c2 = counts(), k2 = 'pkg' + pc.dataset.pkg; c2[k2] = c2[k2] ? 0 : 1; buzz(8); save(); render(); return; }
+  const rq = e.target.closest('[data-req]'); if (rq && profile && !PACKAGES[profile.tier]) { profile.requested_tier = rq.dataset.req; profile.requested_at = new Date().toISOString(); if (!DEMO && user) cloud.saveProfile(user.id, { requested_tier: profile.requested_tier, requested_at: profile.requested_at }).catch(console.error); setTimeout(() => { if (state.tab === 'plan') render(); }, 400); }
   const tg = e.target.closest('[data-tabgo]'); if (tg) { state.tab = tg.dataset.tabgo; save(); render(); window.scrollTo(0, 0); return; }
   const pj = e.target.closest('[data-pact]'); if (pj) return pactAction(pj.dataset.pact, pj.dataset.do);
   const c = e.target.closest('[data-cat]'); if (c) { state.cat = c.dataset.cat; save(); render(); return; }
@@ -835,8 +848,9 @@ async function openAdmin() {
         ${d.flags.length ? d.flags.map(f => `<div class="tile adm-flag"><small>${new Date(f.created_at).toLocaleString()}</small><p><b>Asked:</b> ${esc(f.question)}</p><p><b>Blocked reply:</b> ${esc(f.reply)}</p><p><b>Why:</b> ${esc(f.reason)}</p><button class="btn alt" data-review="${f.id}">Mark reviewed</button></div>`).join('') : '<p class="status">Nothing to review.</p>'}
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
+        ${(() => { const w = d.members.filter(waiting); return w.length ? `<div class="flabel">Waiting on a package (${w.length})</div>` : ''; })()}
         <div class="flabel">Members (${d.members.length})</div>
-        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.paid + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
+        ${[...d.members].sort((a, b) => waiting(b) - waiting(a)).map(m => `<div class="tile adm-mem ${waiting(m) ? 'waiting' : ''}"><b>${esc(m.first_name || '(no name)')}${waiting(m) ? ` <span class="pill-k sm">Requested ${esc(PACKAGES[m.requested_tier].name)}${m.requested_at ? ' · ' + ago(m.requested_at) + ' ago' : ''}</span>` : ''}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.paid + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></div>`).join('')}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
