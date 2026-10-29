@@ -250,13 +250,13 @@ function learn() {
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">Learn the</span><span class="hv"><span class="scrib accent">why${scrib}</span>.</span></h1><p>Short, research-informed reads you can finish in minutes.</p></div>
     <button class="tile dark s4 howto" type="button" data-video="explainer"><span class="hico">${icon('play')}</span><span><span class="eyebrow">How the app works</span><b>Watch the 50-second tour</b></span></button>
-    <div class="s4 chips" role="tablist">${cats.map(c => `<button class="chip ${state.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
-    <button class="tile peach finder-tile s4" data-finder="fiber" id="open-finder-learn"><span class="eyebrow">Tool · USDA data</span><span class="ft-q hv">Protein &amp; fiber finder</span><span class="ft-search">${icon('search')}<span>Compare ${FOODS.length.toLocaleString('en-US')} foods</span></span></button>
-    <button class="tile dark finder-tile s4" data-moves="lib" id="open-moves-learn"><span class="eyebrow">Move library</span><span class="ft-q hv">${EX.length} beginner moves</span><span class="mvstrip">${EX.filter((e, i) => i % 7 === 0).slice(0, 4).map(mvimg).join('')}</span></button>
     ${isAdmin() ? `<button class="tile paper s4 adm-add" data-article-new="1">${icon('pen')}<span><b>New article</b><small>Admins only · write, preview, publish</small></span></button>` : ''}
+    <div class="s4 chips" role="tablist">${cats.map(c => `<button class="chip ${state.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
     ${f ? `<button class="tile lesson feat s4 halftone" data-article="${esc(f.id)}"><canvas data-scene="${['dawn', 'meadow', 'dusk'][(f.sort || 0) % 3]}"></canvas><span class="sticker">${f.published ? 'New' : 'Draft'}</span>
       <span class="label"><span class="tag">${esc(f.cat)} · ${f.minutes} min read</span><b>${esc(f.title)}</b></span></button>` : ''}
     ${tiles}
+    <button class="tile peach finder-tile s4" data-finder="fiber" id="open-finder-learn"><span class="eyebrow">Tool · USDA data</span><span class="ft-q hv">Protein &amp; fiber finder</span><span class="ft-search">${icon('search')}<span>Compare ${FOODS.length.toLocaleString('en-US')} foods</span></span></button>
+    <button class="tile dark finder-tile s4" data-moves="lib" id="open-moves-learn"><span class="eyebrow">Move library</span><span class="ft-q hv">${EX.length} beginner moves</span><span class="mvstrip">${EX.filter((e, i) => i % 7 === 0).slice(0, 4).map(mvimg).join('')}</span></button>
     <div class="s4 sec"><h2><span class="hv">Trusted</span><span class="lt">reads</span></h2><span class="hand">from HHS</span></div>
     ${HF.map(h => `<a class="tile paper hf s2" href="${h.u}" target="_blank" rel="noopener"><span class="eyebrow">MyHealthfinder</span><b>${h.t}</b><span class="ext">odphp.health.gov ↗</span></a>`).join('')}
     <a class="tile butter hf s4" href="https://www.usdalocalfoodportal.com/#directories" target="_blank" rel="noopener"><span class="eyebrow">USDA Local Food Portal</span><b class="big">Find farmers markets near you</b><span>Fresh produce is an easy fiber win. Look up farmers markets, CSAs and farm stands in your area.</span><span class="ext">usdalocalfoodportal.com ↗</span></a>
