@@ -26,10 +26,10 @@ async function requireUser(req: Request) {
   return { user: data.user, profile: profile || {} as Record<string, any> };
 }
 
-async function bumpUsage(uid: string, kind: 'coach' | 'est') {
+async function bumpUsage(uid: string, kind: 'coach' | 'est', dayCap?: number) {
   const { data, error } = await db.rpc('bump_usage', {
     uid, kind, tz: env('APP_TIMEZONE', 'America/Chicago'),
-    day_cap: kind === 'coach' ? CAPS.coachDay : CAPS.estDay, burst_cap: CAPS.coachBurst, burst_min: CAPS.burstMin,
+    day_cap: dayCap ?? (kind === 'coach' ? CAPS.coachDay : CAPS.estDay), burst_cap: CAPS.coachBurst, burst_min: CAPS.burstMin,
     global_cap: Number(env('AI_GLOBAL_DAILY_CAP', '3000')),
   });
   if (error) { console.error('bump_usage', error); return 'Something went wrong. Try again in a minute.'; }
@@ -71,7 +71,9 @@ async function coach(req: Request) {
   const last = history[history.length - 1];
   if (!last || last.role !== 'user') return fail('Send a message first.');
   const pre = preFilter(last.content); if (pre) return json({ kind: pre.kind, text: pre.text });
-  const cap = await bumpUsage(user.id, 'coach'); if (cap) return json({ kind: 'limit', text: cap });
+  const paid = profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier);
+  const dayCap = paid ? CAPS.coachDay : CAPS.coachDayFree;
+  const cap = await bumpUsage(user.id, 'coach', dayCap); if (cap) return json({ kind: 'limit', text: cap });
 
   const msgs: any[] = [];
   for (const m of history) { if (msgs.length && msgs[msgs.length - 1].role === m.role) msgs[msgs.length - 1].content += '\n' + m.content; else msgs.push({ ...m }); }
@@ -89,7 +91,7 @@ async function coach(req: Request) {
     return json({ kind: 'provider', text: PROVIDER_TEXT });
   }
   const { data: u } = await db.from('usage').select('coach').eq('user_id', user.id).order('day', { ascending: false }).limit(1).single();
-  return json({ kind: 'ok', text: reply, left: Math.max(0, CAPS.coachDay - (u?.coach || 0)) });
+  return json({ kind: 'ok', text: reply, left: Math.max(0, dayCap - (u?.coach || 0)) });
 }
 
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -147,7 +149,9 @@ async function portal(req: Request) {
 // Admin: David (is_admin) sees every team; a concierge sees only their own team.
 async function adminRoute(req: Request) {
   const { user, profile } = await requireUser(req);
-  const { data: self } = await db.from('concierges').select('*').eq('user_id', user.id).maybeSingle();
+  // Teams are optional: if the concierges table isn't set up yet, admin works as a single team.
+  const cq = await db.from('concierges').select('*').eq('user_id', user.id).maybeSingle();
+  const teamsOn = !cq.error, self = teamsOn ? cq.data : null;
   const all = !!profile.is_admin;
   if (!all && !self) return fail('Admins only.', 403);
   const team = all ? null : self.id;
@@ -155,11 +159,11 @@ async function adminRoute(req: Request) {
   const groupInTeam = async (groupId: string) => all || (await db.from('groups').select('concierge_id').eq('id', groupId).single()).data?.concierge_id === team;
 
   if (req.method === 'GET') {
-    let pq = db.from('profiles').select('id, first_name, tier, circle_active, group_id, concierge_id, is_admin, created_at').order('created_at', { ascending: false }).limit(1000);
+    let pq = db.from('profiles').select('*').order('created_at', { ascending: false }).limit(1000);
     let gq = db.from('groups').select('*').order('created_at');
     if (team) { pq = pq.eq('concierge_id', team); gq = gq.eq('concierge_id', team); }
     const [{ data: profiles }, { data: groups }, { data: concierges }, usersRes] = await Promise.all([
-      pq, gq, all ? db.from('concierges').select('*').order('created_at') : Promise.resolve({ data: [self] }),
+      pq, gq, !teamsOn ? Promise.resolve({ data: [] }) : all ? db.from('concierges').select('*').order('created_at') : Promise.resolve({ data: [self] }),
       db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     ]);
     const ids = new Set((profiles || []).map((p: any) => p.id));
@@ -169,7 +173,7 @@ async function adminRoute(req: Request) {
     const emails = Object.fromEntries((usersRes.data?.users || []).map((u: any) => [u.id, u.email]));
     const counts: Record<string, number> = {}; (profiles || []).forEach((p: any) => { counts[p.concierge_id] = (counts[p.concierge_id] || 0) + 1; });
     return json({
-      scope: all ? 'all' : 'team', self: self || null,
+      scope: all ? 'all' : 'team', teams: teamsOn, self: self || null,
       concierges: (concierges || []).map((c: any) => ({ ...c, members: counts[c.id] || 0, login_email: c.user_id ? emails[c.user_id] || '' : '' })),
       members: (profiles || []).map((p: any) => ({ ...p, email: emails[p.id] || '' })), groups: groups || [], flags,
     });

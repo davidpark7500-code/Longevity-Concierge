@@ -795,10 +795,10 @@ async function openAdmin() {
     try {
       const d = await cloud.api('/api/admin', null, 'GET');
       const gname = id => (d.groups.find(g => g.id === id) || {}).name || '—';
-      const cname = id => (d.concierges.find(c => c.id === id) || {}).name || '—';
+      const cname = id => ((d.concierges || []).find(c => c.id === id) || {}).name || '—';
       box.innerHTML = `
-        <p class="status">${d.scope === 'all' ? 'You see every team.' : 'You see your team only.'}</p>
-        ${d.scope === 'all' ? `<div class="flabel">Concierges (${d.concierges.length})</div>
+        ${d.teams === false ? '' : `<p class="status">${d.scope === 'all' ? 'You see every team.' : 'You see your team only.'}</p>`}
+        ${d.scope === 'all' && d.teams !== false ? `<div class="flabel">Concierges (${d.concierges.length})</div>
         ${d.concierges.map(c => `<div class="tile adm-group"><b>${esc(c.name)}${c.is_house ? ' · house team' : ''}</b><small>Join link: ${esc(location.host.replace(/^www\./, ''))}/j/${esc(c.slug)} · ${c.members} members${c.login_email ? ' · login ' + esc(c.login_email) : ' · no login linked'}</small></div>`).join('')}
         <div class="tile adm-group"><b>Add a concierge</b>
           <input class="inp" id="cn-name" maxlength="60" placeholder="Full name (shown to their members)">
@@ -815,7 +815,7 @@ async function openAdmin() {
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
         <div class="flabel">Members (${d.members.length})</div>
-        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.kept + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
+        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.kept + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></div>`).join('')}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
