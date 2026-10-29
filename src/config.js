@@ -24,13 +24,14 @@ export const PACKAGES = {
   essentials: {
     name: 'Ease',
     tagline: 'The everyday foundation.',
-    retail: 131.25,
+    retail: 158.25,
     products: [
       { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
       { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
+      { name: 'Electrolyte Twist Tubes', how: 'Single-serve electrolytes you twist into your water.' },
     ],
-    daily: ['Prebiotic fiber', 'Meal shake'],
-    perks: ['Prebiotic Fiber + All-in-One Meal Powder', 'Your package checklist in the app', 'Reorder reminders'],
+    daily: ['Prebiotic fiber', 'Meal shake', 'Electrolytes'],
+    perks: ['Prebiotic Fiber, All-in-One Meal Powder + Electrolyte Twist Tubes', 'Your package checklist in the app', 'Reorder reminders'],
     reorderDays: 30,
   },
   performance: {
@@ -43,7 +44,7 @@ export const PACKAGES = {
       { name: 'XS Creatine + HMB', how: 'Creatine and HMB to pair with your strength training.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Creatine + HMB'],
-    perks: ['Everything in Ease, plus XS Creatine + HMB', 'The Circle included', 'Circle Live sessions'],
+    perks: ['Prebiotic Fiber + Meal Powder, plus XS Creatine + HMB', 'The Circle included', 'Circle Live sessions'],
     reorderDays: 30,
   },
   longevity: {
@@ -58,7 +59,7 @@ export const PACKAGES = {
       { name: 'XS Creatine', how: 'Creatine to pair with your strength training.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Double X multivitamin', 'Muscle Multiplier', 'Creatine'],
-    perks: ['Everything in Ease, plus Double X, Muscle Multiplier and Creatine', 'The Circle included', 'Monthly 1:1 with your concierge'],
+    perks: ['Fiber + Meal Powder, plus Double X, Muscle Multiplier and Creatine', 'The Circle included', 'Monthly 1:1 with your concierge'],
     reorderDays: 30,
   },
 };
@@ -72,7 +73,7 @@ export const MEMBERSHIP = {
   name: 'Loyalty membership',
   fee: 20,
   discount: 40,
-  minOrder: 150,        // the $40 off only applies to product orders of $150+ (so not Ease)
+  minOrder: 150,        // the $40 off and $150+ perks only apply to product orders of $150+ (all three packages qualify)
   // min: true = only with a qualifying $150+ monthly order (per Amway's member sheet).
   perks: [
     { t: '$40 off your monthly order', min: true },
