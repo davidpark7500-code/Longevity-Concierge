@@ -10,7 +10,7 @@ export const CONCIERGE = {
 // Community naming. Change the words here and the whole app follows.
 export const NAMES = {
   tab: 'Check-In',          // bottom tab
-  feed: 'The Check-In',     // public feed everyone can post to
+  feed: 'Check-In',     // public feed everyone can post to
   challenges: 'Challenges', // goal groups
   paid: 'Circle',           // paid inner circle ("Circle member", "Circle Live")
   paidThe: 'the Circle',    // with the article ("Join the Circle")

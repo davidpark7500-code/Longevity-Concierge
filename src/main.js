@@ -246,7 +246,7 @@ function learn() {
   </div>`;
 }
 
-/* ---------------- Community: The Check-In, Challenges, the Circle ---------------- */
+/* ---------------- Community: Check-In, Challenges, the Circle ---------------- */
 const FACE = ['var(--butter)', 'var(--mint)', 'var(--peach)', 'var(--lilac)', 'var(--sun)'];
 const faceColor = s => FACE[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % FACE.length];
 function ago(iso) { const s = (Date.now() - new Date(iso)) / 1000; if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm'; if (s < 86400) return Math.round(s / 3600) + 'h'; return Math.round(s / 86400) + 'd'; }
@@ -263,7 +263,7 @@ function circle() {
       ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.paid} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
       <small>Included with the ${PACKAGES.performance.name} and ${PACKAGES.longevity.name} packages.</small></div>`;
   return top() + `<div class="bento">
-    <div class="s4 title"><h1 class="mix"><span class="lt">The</span><span class="hv">check-in<span class="accent">.</span></span></h1></div>
+    <div class="s4 title"><h1 class="mix"><span class="hv">Check-in<span class="accent">.</span></span></h1></div>
     ${keptTile}
     <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2><span class="hand">join one, check in daily</span></div>
     <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
