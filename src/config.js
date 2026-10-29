@@ -28,10 +28,10 @@ export const PACKAGES = {
     products: [
       { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
       { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
-      { name: 'Electrolyte Twist Tubes', how: 'Single-serve electrolytes you twist into your water.' },
+      { name: 'XS Sport Twist Tubes with Electrolytes', how: 'Single-serve electrolytes you twist into your water.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Electrolytes'],
-    perks: ['Prebiotic Fiber, All-in-One Meal Powder + Electrolyte Twist Tubes', 'Your package checklist in the app', 'Reorder reminders'],
+    perks: ['Prebiotic Fiber, All-in-One Meal Powder + XS Sport Twist Tubes with Electrolytes', 'Your package checklist in the app', 'Reorder reminders'],
     reorderDays: 30,
   },
   performance: {
