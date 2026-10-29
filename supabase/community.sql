@@ -15,7 +15,7 @@ language plpgsql security definer set search_path = public as $$
 begin
   new.user_id := auth.uid();
   new.cheer_count := 0;
-  select coalesce(nullif(first_name,''),'Member'), (circle_active or tier in ('performance','longevity'))
+  select coalesce(nullif(first_name,''),'Member'), (circle_active or tier in ('essentials','performance','longevity'))
     into new.author_name, new.author_kept from profiles where id = auth.uid();
   return new;
 end $$;

@@ -9,7 +9,7 @@ revoke execute on function public.cheer_count()    from public, anon, authentica
 -- 2. has_circle only answers for the signed-in member (no peeking at other members).
 create or replace function public.has_circle(uid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select uid = auth.uid() and coalesce((select circle_active or tier in ('performance','longevity') from profiles where id = uid), false);
+  select uid = auth.uid() and coalesce((select circle_active or tier in ('essentials','performance','longevity') from profiles where id = uid), false);
 $$;
 revoke execute on function public.has_circle(uuid) from public, anon;
 grant execute on function public.has_circle(uuid) to authenticated;

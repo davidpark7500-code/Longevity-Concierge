@@ -31,7 +31,7 @@ export const PACKAGES = {
       { name: 'XS Sport Twist Tubes with Electrolytes', how: 'Single-serve electrolytes you twist into your water.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Electrolytes'],
-    perks: ['Prebiotic Fiber, All-in-One Meal Powder + XS Sport Twist Tubes with Electrolytes', 'Your package checklist in the app', 'Reorder reminders'],
+    perks: ['Prebiotic Fiber, All-in-One Meal Powder + XS Sport Twist Tubes with Electrolytes', 'The Circle included', 'Circle Live sessions'],
     reorderDays: 30,
   },
   performance: {

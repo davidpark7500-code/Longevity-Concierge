@@ -101,7 +101,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const icon = (k, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
 const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
-const hasCircle = () => !!profile && (profile.circle_active || ['performance', 'longevity'].includes(profile.tier));
+const hasCircle = () => !!profile && (profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier));
 const tierKey = () => (profile && profile.tier) || 'free';
 const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
 const contactBtn = (cls = 'btn', text) => { const c = concierge(); return c.contact ? `<a class="${cls}" href="${esc(c.contact)}" ${/^https:/.test(c.contact) ? 'target="_blank" rel="noopener"' : ''}>${esc(text || c.label)}</a>` : ''; };
@@ -260,8 +260,8 @@ function circle() {
     : `<div class="tile lilac join s4"><span class="eyebrow">Members only</span><b class="hv">The Circle<span class="accent">.</span></b>
       <p>${esc(NAMES.paidLine)}</p>
       <ul><li>${NAMES.paid} Live: members-only Q&amp;A sessions with replays</li><li>Members-only challenges</li><li>A private group for people on the same path</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
-      ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.paid} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
-      <small>Included with the ${PACKAGES.performance.name} and ${PACKAGES.longevity.name} packages.</small></div>`;
+      <button class="btn" data-tabgo="plan" id="join-circle">Pick a package to join</button>
+      <small>Included with every package: ${Object.values(PACKAGES).map(p => esc(p.name)).join(', ')}.</small></div>`;
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="hv">Check-in<span class="accent">.</span></span></h1></div>
     ${keptTile}
@@ -350,9 +350,8 @@ async function loadFeed() {
 const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
 function plan() {
   const tier = tierKey(), pk = PACKAGES[tier], c = concierge();
-  const keptLine = profile?.circle_active ? `<p>You’re a ${NAMES.paid} member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
-    : hasCircle() ? `<p>The Circle is included with your package.</p>`
-    : `<p>Not a ${NAMES.paid} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.paidThe}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
+  const keptLine = hasCircle() ? `<p>The Circle is included with your package.</p>`
+    : `<p>${NAMES.paidThe[0].toUpperCase() + NAMES.paidThe.slice(1)} comes with every package.</p>`;
   const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
   const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, true)}${perksBlock(pk)}
       <div class="prods">${pk.products.map(p => `<div class="prod"><b>${esc(p.name)}</b><small>${esc(p.how)}</small></div>`).join('')}</div>

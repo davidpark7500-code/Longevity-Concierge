@@ -38,7 +38,7 @@ create trigger on_auth_user_created after insert on auth.users
 -- Circle access: paid subscription, or a Performance / Longevity package.
 create or replace function public.has_circle(uid uuid) returns boolean
 language sql stable security definer set search_path = public as $$
-  select coalesce((select circle_active or tier in ('performance','longevity') from profiles where id = uid), false);
+  select coalesce((select circle_active or tier in ('essentials','performance','longevity') from profiles where id = uid), false);
 $$;
 
 -- ---------- Synced app data (habits, meals, favorites, targets) ----------
@@ -74,7 +74,7 @@ create or replace function public.assign_group() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare g uuid; n int;
 begin
-  if new.group_id is null and (new.circle_active or new.tier in ('performance','longevity')) then
+  if new.group_id is null and (new.circle_active or new.tier in ('essentials','performance','longevity')) then
     select gr.id into g from groups gr
       left join profiles p on p.group_id = gr.id
       group by gr.id, gr.max_members

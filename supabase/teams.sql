@@ -64,7 +64,7 @@ begin
   if new.group_id is not null and (tg_op = 'INSERT' or new.concierge_id is distinct from old.concierge_id) then
     if (select concierge_id from groups where id = new.group_id) is distinct from team then new.group_id := null; end if;
   end if;
-  if new.group_id is null and (new.circle_active or new.tier in ('performance','longevity')) then
+  if new.group_id is null and (new.circle_active or new.tier in ('essentials','performance','longevity')) then
     select gr.id into g from groups gr
       left join profiles p on p.group_id = gr.id
       where gr.concierge_id = team
