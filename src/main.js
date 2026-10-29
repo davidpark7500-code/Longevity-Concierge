@@ -25,6 +25,8 @@ const { DEMO } = cloud;
 
 /* ---------------- Static content ---------------- */
 const ICONS = {
+  play: '<path d="M8 5.5v13l10-6.5z"/>',
+  sound: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
   protein: '<path d="M7 3h10l-1 4H8z"/><path d="M8 7l-1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2L16 7"/><path d="M9.5 12h5"/>',
   water: '<path d="M12 2.7S5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.7 12 2.7z"/>',
   move: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
@@ -244,6 +246,7 @@ function learn() {
     return `<div class="tile lesson ${TILE_COLORS[i % 4]} ${wide ? 's4 wide' : 's2'}"><span class="glyph">${icon(l.icon)}</span><span class="tag">${l.cat}</span><b>${esc(l.title)}</b><span class="min">Coming soon · ${l.min} min read</span></div>`; }).join('');
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">Learn the</span><span class="hv"><span class="scrib accent">why${scrib}</span>.</span></h1><p>Short, research-informed reads you can finish in minutes.</p></div>
+    <button class="tile dark s4 howto" type="button" data-video="explainer"><span class="hico">${icon('play')}</span><span><span class="eyebrow">How the app works</span><b>Watch the 50-second tour</b></span></button>
     <div class="s4 chips" role="tablist">${cats.map(c => `<button class="chip ${state.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
     <button class="tile peach finder-tile s4" data-finder="fiber" id="open-finder-learn"><span class="eyebrow">Tool · USDA data</span><span class="ft-q hv">Protein &amp; fiber finder</span><span class="ft-search">${icon('search')}<span>Compare ${FOODS.length.toLocaleString('en-US')} foods</span></span></button>
     <button class="tile dark finder-tile s4" data-moves="lib" id="open-moves-learn"><span class="eyebrow">Move library</span><span class="ft-q hv">${EX.length} beginner moves</span><span class="mvstrip">${EX.filter((e, i) => i % 7 === 0).slice(0, 4).map(mvimg).join('')}</span></button>
@@ -503,6 +506,7 @@ document.addEventListener('click', async e => {
     if (n === def.goal) toast(animFrom?.perfect || (pct() === 100 && before < 100) ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
   const pc = e.target.closest('[data-pkg]'); if (pc) { const c2 = counts(), k2 = 'pkg' + pc.dataset.pkg; c2[k2] = c2[k2] ? 0 : 1; buzz(8); save(); render(); return; }
   const rq = e.target.closest('[data-req]'); if (rq && profile && !PACKAGES[profile.tier]) { profile.requested_tier = rq.dataset.req; profile.requested_at = new Date().toISOString(); if (!DEMO && user) cloud.saveProfile(user.id, { requested_tier: profile.requested_tier, requested_at: profile.requested_at }).catch(console.error); setTimeout(() => { if (state.tab === 'plan') render(); }, 400); }
+  const vb = e.target.closest('[data-video]'); if (vb) { playVideo(vb.dataset.video); return; }
   const tg = e.target.closest('[data-tabgo]'); if (tg) { state.tab = tg.dataset.tabgo; save(); render(); window.scrollTo(0, 0); return; }
   const pj = e.target.closest('[data-pact]'); if (pj) return pactAction(pj.dataset.pact, pj.dataset.do);
   const c = e.target.closest('[data-cat]'); if (c) { state.cat = c.dataset.cat; save(); render(); return; }
@@ -937,7 +941,7 @@ function authScreen(msg = '') {
   let skipped = false; try { skipped = sessionStorage.getItem('lc-skip-install') === '1'; } catch { /* storage blocked */ }
   const nudge = p.mobile && !p.standalone && !skipped && !msg;
   app.innerHTML = `<div class="auth"><header class="top">${wordmark()}</header>
-    <div class="tile hero halftone auth-hero"><canvas data-scene="dawn"></canvas><div class="txt"><span class="eyebrow">Members</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
+    <div class="tile hero halftone auth-hero"><canvas data-scene="dawn"></canvas><div class="txt"><span class="eyebrow">Members</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div><button class="watch" type="button" id="watch-promo">${icon('play')}Watch the 18-second tour</button></div>
     ${nudge ? installTile(p) : ''}
     <form class="tile auth-form" id="auth-form" ${nudge ? 'hidden' : ''}><label class="eyebrow" for="auth-email">Sign in or create your account</label>
       <input id="auth-email" class="inp" type="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
@@ -946,6 +950,9 @@ function authScreen(msg = '') {
       <p class="status">No password needed. We’ll email you a link and a sign-in code.</p>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p></div>`;
   requestAnimationFrame(paintAll);
+  document.getElementById('watch-promo').onclick = () => playVideo('promo');
+  let seenPromo = false; try { seenPromo = localStorage.getItem('lc-promo-seen') === '1'; } catch { /* storage blocked */ }
+  if (!seenPromo && !msg && !quietMode()) { try { localStorage.setItem('lc-promo-seen', '1'); } catch { /* storage blocked */ } playVideo('promo'); }
   const skip = document.getElementById('skip-install');
   if (skip) skip.onclick = () => { try { sessionStorage.setItem('lc-skip-install', '1'); } catch { /* storage blocked */ } document.querySelector('.install-tile').remove(); document.getElementById('auth-form').hidden = false; };
   const nat = document.querySelector('[data-native-install]');
@@ -984,10 +991,36 @@ function onboarding() {
       <button class="btn sun" type="submit">Start</button></form></div>`;
   document.getElementById('onb').addEventListener('submit', async e => {
     e.preventDefault(); const name = document.getElementById('onb-name').value.trim().slice(0, 40);
-    try { const patch = { first_name: name, accepted_at: new Date().toISOString() }; await cloud.saveProfile(user.id, patch); Object.assign(profile, patch); render(); }
+    try { const patch = { first_name: name, accepted_at: new Date().toISOString() }; await cloud.saveProfile(user.id, patch); Object.assign(profile, patch); render(); maybeExplainer(); }
     catch { toast('Couldn’t save. Check your connection and try again.'); }
   });
 }
+
+
+/* ---------------- Video overlays (promo before sign-up, explainer after first login) ---------------- */
+const VIDEOS = {
+  promo: { src: '/media/promo.mp4', poster: '/media/promo.jpg', cta: 'Get started →', label: 'Quick tour' },
+  explainer: { src: '/media/explainer.mp4', poster: '/media/explainer.jpg', cta: 'Let’s go →', label: 'How it works' },
+};
+function playVideo(key, onDone) {
+  const v = VIDEOS[key]; document.querySelector('.vidov')?.remove();
+  const el = document.createElement('div'); el.className = 'vidov'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', v.label);
+  el.innerHTML = `<video playsinline muted autoplay preload="auto" poster="${v.poster}" src="${v.src}"></video>
+    <button class="vsound" type="button" aria-pressed="false">${icon('sound')}<span>Tap for sound</span></button>
+    <div class="vbar"><i></i></div>
+    <button class="btn sun vgo" type="button">${esc(v.cta)}</button>`;
+  document.body.appendChild(el);
+  const vid = el.querySelector('video'), snd = el.querySelector('.vsound'), bar = el.querySelector('.vbar i');
+  let done = false;
+  const close = () => { if (done) return; done = true; vid.pause(); el.classList.add('out'); setTimeout(() => el.remove(), 260); onDone && onDone(); };
+  snd.onclick = () => { vid.muted = !vid.muted; if (!vid.muted && vid.ended) { vid.currentTime = 0; } vid.play().catch(() => {}); snd.setAttribute('aria-pressed', String(!vid.muted)); snd.querySelector('span').textContent = vid.muted ? 'Tap for sound' : 'Sound on'; buzz(8); };
+  vid.addEventListener('timeupdate', () => { if (vid.duration) bar.style.width = (vid.currentTime / vid.duration * 100) + '%'; });
+  vid.addEventListener('ended', close);
+  vid.addEventListener('click', () => snd.click());
+  el.querySelector('.vgo').onclick = close;
+  vid.play().catch(() => {});
+}
+const quietMode = () => matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
 
 /* ---------------- Boot ---------------- */
 let started = false;
@@ -1006,8 +1039,9 @@ async function startSession(session) {
   if (params.has('circle')) history.replaceState(null, '', location.pathname);
   try { const c = await cloud.loadConcierges(user.id, profile.concierge_id); myConcierge = c.mine; selfConcierge = c.self; } catch (e) { console.error(e); }
   if (!profile.first_name || !profile.accepted_at) return onboarding();
-  render();
+  render(); maybeExplainer();
 }
+function maybeExplainer() { if (state.seenExplainer || DEMO) return; state.seenExplainer = true; save(); setTimeout(() => playVideo('explainer'), 400); }
 async function boot() {
   if (DEMO) {
     const dt = new URLSearchParams(location.search).get('tier');
