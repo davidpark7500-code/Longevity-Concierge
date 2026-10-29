@@ -188,6 +188,7 @@ function today() {
       <div><p class="hand mood">${mood}</p><small>${done} of ${HABITS.length} habits done</small></div></div>
     <div class="tile butter streak s2">${sun()}<span class="eyebrow">Streak</span><b class="hv">${st}</b><span class="hand">${st === 1 ? 'day' : 'days'} in a row</span></div>
     <div class="tile paper week s2"><span class="eyebrow">This week</span><div class="dots">${week}</div></div>
+    ${PACKAGES[tierKey()] ? '' : freeCta()}
     <div class="s4 sec"><h2><span class="hv">Today’s</span><span class="lt">habits</span></h2><span class="hand">tap to log</span></div>
     ${HABITS.map((h, i) => habitTile(h, i === 0)).join('')}
     ${packageTile()}
@@ -199,9 +200,13 @@ function today() {
   </div>`;
 }
 
+function freeCta() {
+  const f = PACKAGES[FEATURED.key], m = monthly(f);
+  return `<button class="tile dark plan feat-pkg pkg-cta s4" data-tabgo="plan" id="free-cta"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">Make it easier</span><b class="hv">${esc(f.name)}</b><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="why">${m.off ? money(m.off) + ' off every month, free shipping, a free product and ' + NAMES.paidThe + ' included.' : NAMES.paidThe + ' included.'}</span><span class="btn sun">See the packages →</span></button>`;
+}
 function packageTile() {
   const k = tierKey(), pk = PACKAGES[k];
-  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the packages. ${esc(PACKAGES[FEATURED.key].name)} is the ${esc(FEATURED.badge.toLowerCase())} →</span></button>`;
+  if (!pk) return '';
   const c = counts();
   const items = pk.daily.map((d, i) => { const on = !!c['pkg' + i]; return `<button class="pchk${on ? ' on' : ''}" data-pkg="${i}" aria-pressed="${on}"><span class="box">${on ? icon('check') : ''}</span>${esc(d)}</button>`; }).join('');
   const done = pk.daily.filter((_, i) => c['pkg' + i]).length;
@@ -356,12 +361,12 @@ function plan() {
       ${tier === 'longevity' && BOOKING_URL ? `<a class="btn sun" href="${esc(BOOKING_URL)}" target="_blank" rel="noopener">Book your monthly 1:1</a>` : ''}</div>`
     : `<div class="tile dark plan current s4"><span class="eyebrow">Current</span><b class="hv">Free</b>${list(TIERS.free.items)}<div class="circle-status">${keptLine}</div></div>`;
   return top() + `<div class="bento">
-    <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">plan<span class="accent">.</span></span></h1><p>Your package, your concierge, and what’s next.</p></div>
-    ${current}
-    ${conciergeTile()}
-    <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'The'}</span><span class="lt">packages</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
+    <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">plan<span class="accent">.</span></span></h1><p>${pk ? 'Your package, your concierge, and what’s next.' : 'Choose a package and your concierge gets it to your door.'}</p></div>
+    ${pk ? current + conciergeTile() : ''}
+    <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'Pick a'}</span><span class="lt">${pk ? 'packages' : 'package'}</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
     ${featuredTile(others, tier)}
     ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${perksBlock(PACKAGES[k])}</div>`).join('')}
+    ${pk ? '' : `<div class="tile paper free-line s4"><span class="eyebrow">You’re on Free</span><p>${TIERS.free.items.map(esc).join(' · ')}</p><div class="circle-status">${keptLine}</div></div>` + conciergeTile()}
     <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>

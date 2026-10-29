@@ -479,7 +479,7 @@ body.sheet-open .toast.in{transform:translate(-50%,0)}
 .pchk .box svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .pchk.on{background:var(--forest);color:var(--on-forest)}.pchk.on .box{background:var(--sun);border-color:var(--sun);color:var(--on-pastel)}
 .reorder{font-size:13.5px;margin:0}
-.pkg-cta{display:flex;flex-direction:column;gap:8px;width:100%}.pkg-cta .hv{font-size:44px}.pkg-cta span:last-child{font-weight:600;font-size:14px}
+.pkg-cta{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:100%;text-align:left;font:inherit;cursor:pointer;position:relative}.pkg-cta>.hv{font-size:44px}.pkg-cta .ptot{font-size:32px}.pkg-cta .ptot small{font-size:14px}.pkg-cta .why{font-size:14px;opacity:.9}.pkg-cta .btn{margin-top:6px;pointer-events:none}.free-line p{margin:4px 0 0;font-size:13px;color:var(--muted)}
 .conc{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}
 .conc .face{width:44px;height:44px;font-size:18px;border:0;margin:0}
 .conc b{display:block;font-family:var(--display);font-weight:800;font-stretch:80%;font-size:26px;line-height:1}
