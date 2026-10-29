@@ -526,3 +526,17 @@ body.sheet-open .toast.in{transform:translate(-50%,0)}
 .howto{display:flex;align-items:center;gap:14px;text-align:left;width:100%;font:inherit;color:var(--on-forest);cursor:pointer}
 .howto .hico{width:44px;height:44px;border-radius:50%;background:var(--sun);display:grid;place-items:center;color:#fff;flex:none}
 .howto b{display:block;font-size:17px;margin-top:2px}
+/* ---------- articles + admin forms ---------- */
+button.tile.lesson{font:inherit;text-align:left;cursor:pointer;width:100%}
+.art{padding:4px 20px 30px}.art h2.hv{font-size:40px;margin:4px 0 12px}.art .lede{font-size:17px;font-weight:600;color:var(--ink)}
+.art h3{font-family:var(--display);font-weight:800;font-stretch:80%;font-size:22px;margin:22px 0 6px}
+.art p,.art li{font-size:16px;line-height:1.6}.art ul,.art ol{padding-left:22px;margin:6px 0}.art li{margin:4px 0}
+.art .srcs{margin-top:22px;padding:14px;border-radius:16px;background:var(--tile-2)}.art .srcs li{font-size:13px}
+.art .btn{margin-top:16px}
+.adm-add{display:flex;gap:12px;align-items:center;text-align:left;font:inherit;border:2px dashed var(--line);cursor:pointer}
+.adm-add svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}.adm-add small{display:block;color:var(--muted)}
+.adm-form{display:grid;gap:12px;padding:4px 18px 30px}.adm-form label{display:grid;gap:6px;font-weight:600;font-size:13px}
+.adm-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+.adm-form textarea.tall{min-height:260px;font:15px/1.5 var(--body)}.adm-form .check{display:flex;gap:8px;align-items:center;font-weight:500}
+.btn.danger{color:#c0392b}
+.pact-edit{margin-left:auto;font-size:12px}.pact.ended{opacity:.6}

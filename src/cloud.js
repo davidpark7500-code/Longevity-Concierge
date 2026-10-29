@@ -134,3 +134,22 @@ export async function loadPacts() {
 export async function joinPact(id, day) { const { error } = await sb.from('pact_members').insert({ pact_id: id, joined_on: day }); if (error && error.code !== '23505') throw error; }
 export async function pactCheckIn(id, day) { const { error } = await sb.from('pact_checkins').insert({ pact_id: id, day }); if (error && error.code !== '23505') throw error; }
 export async function pactUndo(id, day) { const { error } = await sb.from('pact_checkins').delete().eq('pact_id', id).eq('day', day); if (error) throw error; }
+
+// ---------- Articles (Learn) ----------
+export async function loadArticles() {
+  const { data, error } = await sb.from('articles').select('*').order('sort').order('created_at');
+  if (error) throw error; return data || [];
+}
+export async function saveArticle(a) {
+  const row = { title: a.title, cat: a.cat, minutes: a.minutes, icon: a.icon, summary: a.summary || null, body: a.body, sources: a.sources || null, published: !!a.published, sort: a.sort };
+  const q = a.id ? sb.from('articles').update(row).eq('id', a.id).select().single() : sb.from('articles').insert(row).select().single();
+  const { data, error } = await q; if (error) throw error; return data;
+}
+export async function deleteArticle(id) { const { error } = await sb.from('articles').delete().eq('id', id); if (error) throw error; }
+
+// ---------- Challenges admin ----------
+export async function savePact(p) {
+  const row = { title: p.title, goal: p.goal, icon: p.icon, days: p.days, members_only: !!p.members_only, active: p.active !== false, sort: p.sort };
+  const q = p.id ? sb.from('pacts').update(row).eq('id', p.id).select().single() : sb.from('pacts').insert(row).select().single();
+  const { data, error } = await q; if (error) throw error; return data;
+}

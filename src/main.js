@@ -13,6 +13,7 @@ import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
 import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
+import { SEED_ARTICLES } from './articles-seed.js';
 import { CONCIERGE, NAMES, PACKAGES, VALDURA, MEMBERSHIP, FEATURED, monthly, money } from './config.js';
 // App feel on iOS: Safari ignores user-scalable=no, so block pinch and double-tap zoom here too.
 if (typeof document !== 'undefined') {
@@ -240,18 +241,21 @@ function conciergeTile() {
 /* ---------------- Learn ---------------- */
 function learn() {
   const cats = ['All', 'Protein', 'Strength', 'Nutrition', 'Mindset', 'Provider'];
-  const list = LESSONS.filter(l => state.cat === 'All' || l.cat === state.cat);
+  if (!articles) loadArticles();
+  const all = (articles || SEED_ARTICLES).filter(l => l.published || isAdmin());
+  const list = all.filter(l => state.cat === 'All' || l.cat === state.cat);
   const [f, ...rest] = list;
   const tiles = rest.map((l, i) => { const wide = rest.length % 2 === 1 && i === rest.length - 1;
-    return `<div class="tile lesson ${TILE_COLORS[i % 4]} ${wide ? 's4 wide' : 's2'}"><span class="glyph">${icon(l.icon)}</span><span class="tag">${l.cat}</span><b>${esc(l.title)}</b><span class="min">Coming soon · ${l.min} min read</span></div>`; }).join('');
+    return `<button class="tile lesson ${TILE_COLORS[i % 4]} ${wide ? 's4 wide' : 's2'}" data-article="${esc(l.id)}"><span class="glyph">${icon(ICONS[l.icon] ? l.icon : 'protein')}</span><span class="tag">${esc(l.cat)}${l.published ? '' : ' · Draft'}</span><b>${esc(l.title)}</b><span class="min">${l.minutes} min read</span></button>`; }).join('');
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">Learn the</span><span class="hv"><span class="scrib accent">why${scrib}</span>.</span></h1><p>Short, research-informed reads you can finish in minutes.</p></div>
     <button class="tile dark s4 howto" type="button" data-video="explainer"><span class="hico">${icon('play')}</span><span><span class="eyebrow">How the app works</span><b>Watch the 50-second tour</b></span></button>
     <div class="s4 chips" role="tablist">${cats.map(c => `<button class="chip ${state.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
     <button class="tile peach finder-tile s4" data-finder="fiber" id="open-finder-learn"><span class="eyebrow">Tool · USDA data</span><span class="ft-q hv">Protein &amp; fiber finder</span><span class="ft-search">${icon('search')}<span>Compare ${FOODS.length.toLocaleString('en-US')} foods</span></span></button>
     <button class="tile dark finder-tile s4" data-moves="lib" id="open-moves-learn"><span class="eyebrow">Move library</span><span class="ft-q hv">${EX.length} beginner moves</span><span class="mvstrip">${EX.filter((e, i) => i % 7 === 0).slice(0, 4).map(mvimg).join('')}</span></button>
-    ${f ? `<div class="tile lesson feat s4 halftone"><canvas data-scene="${f.scene}"></canvas><span class="sticker">Soon</span>
-      <span class="label"><span class="tag">${f.cat} · ${f.min} min read</span><b>${esc(f.title)}</b></span></div>` : ''}
+    ${isAdmin() ? `<button class="tile paper s4 adm-add" data-article-new="1">${icon('pen')}<span><b>New article</b><small>Admins only · write, preview, publish</small></span></button>` : ''}
+    ${f ? `<button class="tile lesson feat s4 halftone" data-article="${esc(f.id)}"><canvas data-scene="${['dawn', 'meadow', 'dusk'][(f.sort || 0) % 3]}"></canvas><span class="sticker">${f.published ? 'New' : 'Draft'}</span>
+      <span class="label"><span class="tag">${esc(f.cat)} · ${f.minutes} min read</span><b>${esc(f.title)}</b></span></button>` : ''}
     ${tiles}
     <div class="s4 sec"><h2><span class="hv">Trusted</span><span class="lt">reads</span></h2><span class="hand">from HHS</span></div>
     ${HF.map(h => `<a class="tile paper hf s2" href="${h.u}" target="_blank" rel="noopener"><span class="eyebrow">MyHealthfinder</span><b>${h.t}</b><span class="ext">odphp.health.gov ↗</span></a>`).join('')}
@@ -268,18 +272,18 @@ function circle() {
   const access = hasCircle(), feed = access ? state.feed : 'wins';
   const g = groupInfo;
   const keptTile = access ? `<div class="tile dark live s4">${badge('THE CIRCLE • MEMBERS ONLY • ')}
-      <span class="eyebrow livedot">${esc(g?.next_call || NAMES.paid + ' Live')}</span>
+      <span class="eyebrow livedot">${esc(NAMES.paid + ' Live · ' + (g?.next_call || 'Weekly'))}</span>
       <b class="hv">The Circle<span class="accent">.</span></b>
       <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join ${NAMES.paid} Live</a>` : `<small>You’re a ${NAMES.paid} member. Live session links show up here.</small>`}</div></div>`
     : `<div class="tile lilac join s4"><span class="eyebrow">Members only</span><b class="hv">The Circle<span class="accent">.</span></b>
       <p>${esc(NAMES.paidLine)}</p>
-      <ul><li>${NAMES.paid} Live: members-only Q&amp;A sessions with replays</li><li>Members-only challenges</li><li>A private group for people on the same path</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
+      <ul><li>${NAMES.paid} Live: weekly members-only Q&amp;A calls</li><li>Members-only challenges</li><li>A private group for people on the same path</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
       <button class="btn" data-tabgo="plan" id="join-circle">Pick a package to join</button>
       <small>Included with every package: ${Object.values(PACKAGES).map(p => esc(p.name)).join(', ')}.</small></div>`;
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="hv">Check-in<span class="accent">.</span></span></h1></div>
     ${keptTile}
-    <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2><span class="hand">join one, check in daily</span></div>
+    <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2>${isAdmin() && !DEMO ? `<button class="linkbtn" data-pact-new="1">+ New challenge</button>` : `<span class="hand">join one, check in daily</span>`}</div>
     <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
     <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My ${NAMES.paid} group</button></div>
     <div class="tile s4 composer"><label class="eyebrow" for="post-body">Check in</label>
@@ -323,7 +327,9 @@ function renderPacts() {
       : pr.over ? `<span class="pact-done">${pr.done >= p.days * 0.8 ? 'Challenge complete!' : 'Finished'} · ${pr.done}/${p.days}</span>`
       : pr.today ? `<button class="btn alt" data-pact="${esc(p.id)}" data-do="undo">${icon('check')}Checked in</button>`
       : `<button class="btn sun" data-pact="${esc(p.id)}" data-do="check">Check in today</button>`;
-    return `<div class="tile pact ${p.members_only ? 'dark' : ''}"><div class="pact-top"><span class="hico">${icon(ICONS[p.icon] ? p.icon : 'check')}</span>${p.members_only ? `<span class="pill-k">${NAMES.paid}</span>` : ''}</div>
+    if (p.active === false && !isAdmin()) return '';
+    const adminBit = isAdmin() && !DEMO ? `<button class="linkbtn pact-edit" data-pact-edit="${esc(p.id)}">${p.active === false ? 'Ended · Edit' : 'Edit'}</button>` : '';
+    return `<div class="tile pact ${p.members_only ? 'dark' : ''} ${p.active === false ? 'ended' : ''}"><div class="pact-top"><span class="hico">${icon(ICONS[p.icon] ? p.icon : 'check')}</span>${p.members_only ? `<span class="pill-k">${NAMES.paid}</span>` : ''}${adminBit}</div>
       <b>${esc(p.title)}</b><small>${esc(p.goal)}</small>
       ${pr ? `<span class="bar"><i style="width:${pr.done / p.days * 100}%"></i></span><small>Day ${pr.dayN} of ${p.days} · ${pr.done} check-in${pr.done === 1 ? '' : 's'}</small>` : `<small class="pstat">${st[0]} joined${st[1] ? ` · ${st[1]} checked in today` : ''} · ${p.days} days</small>`}
       ${action}</div>`;
@@ -506,6 +512,10 @@ document.addEventListener('click', async e => {
     if (n === def.goal) toast(animFrom?.perfect || (pct() === 100 && before < 100) ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
   const pc = e.target.closest('[data-pkg]'); if (pc) { const c2 = counts(), k2 = 'pkg' + pc.dataset.pkg; c2[k2] = c2[k2] ? 0 : 1; buzz(8); save(); render(); return; }
   const rq = e.target.closest('[data-req]'); if (rq && profile && !PACKAGES[profile.tier]) { profile.requested_tier = rq.dataset.req; profile.requested_at = new Date().toISOString(); if (!DEMO && user) cloud.saveProfile(user.id, { requested_tier: profile.requested_tier, requested_at: profile.requested_at }).catch(console.error); setTimeout(() => { if (state.tab === 'plan') render(); }, 400); }
+  const ar = e.target.closest('[data-article]'); if (ar) { openArticle(ar.dataset.article); return; }
+  if (e.target.closest('[data-article-new]')) { editArticle(); return; }
+  const pe = e.target.closest('[data-pact-edit]'); if (pe) { editPact(pactData.pacts.find(x => String(x.id) === pe.dataset.pactEdit) || {}); return; }
+  if (e.target.closest('[data-pact-new]')) { editPact(); return; }
   const vb = e.target.closest('[data-video]'); if (vb) { playVideo(vb.dataset.video); return; }
   const tg = e.target.closest('[data-tabgo]'); if (tg) { state.tab = tg.dataset.tabgo; save(); render(); window.scrollTo(0, 0); return; }
   const pj = e.target.closest('[data-pact]'); if (pj) return pactAction(pj.dataset.pact, pj.dataset.do);
@@ -997,6 +1007,93 @@ function onboarding() {
 }
 
 
+
+/* ---------------- Articles: reader + admin editor ---------------- */
+let articles = null;
+const isAdmin = () => !!profile?.is_admin;
+async function loadArticles() {
+  if (DEMO) { articles = SEED_ARTICLES; return; }
+  articles = SEED_ARTICLES; // show starter set instantly, then swap in live
+  try { articles = await cloud.loadArticles(); if (state.tab === 'learn') render(); } catch (e) { console.error(e); }
+}
+function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>'); }
+function md(text) {
+  const out = []; let list = null;
+  const flush = () => { if (list) { out.push(`<${list.t}>${list.items.join('')}</${list.t}>`); list = null; } };
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    let mm;
+    if ((mm = line.match(/^##\s+(.*)/))) { flush(); out.push(`<h3>${inline(mm[1])}</h3>`); }
+    else if ((mm = line.match(/^[-•]\s+(.*)/))) { if (!list || list.t !== 'ul') { flush(); list = { t: 'ul', items: [] }; } list.items.push(`<li>${inline(mm[1])}</li>`); }
+    else if ((mm = line.match(/^\d+[.)]\s+(.*)/))) { if (!list || list.t !== 'ol') { flush(); list = { t: 'ol', items: [] }; } list.items.push(`<li>${inline(mm[1])}</li>`); }
+    else { flush(); out.push(`<p>${inline(line)}</p>`); }
+  }
+  flush(); return out.join('');
+}
+function openArticle(id) {
+  const a = (articles || SEED_ARTICLES).find(x => String(x.id) === String(id)); if (!a) return;
+  const src = (a.sources || '').split('\n').filter(Boolean);
+  const s = sheet(`<header><span class="eyebrow">${esc(a.cat)} · ${a.minutes} min read${a.published ? '' : ' · Draft'}</span><button class="x" aria-label="Close">×</button></header>
+    <article class="mvbody art"><h2 class="hv">${esc(a.title)}</h2>${a.summary ? `<p class="lede">${inline(a.summary)}</p>` : ''}${md(a.body)}
+      ${src.length ? `<div class="srcs"><span class="eyebrow">Sources</span><ul>${src.map(x => `<li>${inline(x)}</li>`).join('')}</ul></div>` : ''}
+      <p class="disclaim">General wellness education, not medical advice. Talk with your provider before changing your nutrition, exercise or medications.</p>
+      ${isAdmin() && !DEMO ? `<button class="btn alt" data-edit-article="${esc(a.id)}">${icon('pen')}Edit article</button>` : ''}</article>`);
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.close(); return; }
+    if (e.target.closest('[data-edit-article]')) { s.close(); setTimeout(() => editArticle(a), 280); } });
+}
+const ART_CATS = ['Protein', 'Strength', 'Nutrition', 'Mindset', 'Provider', 'Sleep'];
+function editArticle(a = {}) {
+  const isNew = !a.id;
+  const s = sheet(`<header><span class="hv">${isNew ? 'New article' : 'Edit article'}</span><button class="x" aria-label="Close">×</button></header>
+    <form class="mvbody adm-form" id="art-form">
+      <label>Title<input class="inp" name="title" maxlength="120" required value="${esc(a.title || '')}"></label>
+      <div class="row2"><label>Category<select class="inp" name="cat">${ART_CATS.map(c => `<option ${c === (a.cat || 'Nutrition') ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+        <label>Minutes<input class="inp" name="minutes" type="number" min="1" max="30" value="${a.minutes || 4}"></label></div>
+      <label>One-line summary<input class="inp" name="summary" maxlength="240" value="${esc(a.summary || '')}"></label>
+      <label>Article<textarea class="inp tall" name="body" required placeholder="Write here. Start a line with ## for a heading, - for a bullet, 1. for a numbered list. Wrap words in **double stars** for bold.">${esc(a.body || '')}</textarea></label>
+      <label>Sources (one per line)<textarea class="inp" name="sources" rows="3">${esc(a.sources || '')}</textarea></label>
+      <div class="row2"><label>Order (lower = first)<input class="inp" name="sort" type="number" value="${a.sort ?? 100}"></label>
+        <label class="check"><input type="checkbox" name="published" ${a.published ? 'checked' : ''}> <span>Published (members can see it)</span></label></div>
+      <p class="status">Keep it general wellness: no dosing, no promises to treat or cure, no medication claims.</p>
+      <div class="btnrow"><button class="btn sun" type="submit">Save</button><button class="btn alt" type="button" data-preview="1">Preview</button>${isNew ? '' : '<button class="btn ghost danger" type="button" data-del="1">Delete</button>'}</div>
+    </form>`);
+  const f = s.querySelector('#art-form');
+  const read = () => { const d = Object.fromEntries(new FormData(f)); return { id: a.id, title: d.title.trim(), cat: d.cat, minutes: +d.minutes || 4, icon: a.icon || ({ Protein: 'protein', Strength: 'move', Nutrition: 'fiber', Mindset: 'sleep', Provider: 'ask', Sleep: 'sleep' }[d.cat]), summary: d.summary.trim(), body: d.body, sources: d.sources.trim(), sort: +d.sort || 100, published: !!d.published }; };
+  s.addEventListener('click', async e => {
+    if (e.target === s || e.target.closest('.x')) { s.close(); return; }
+    if (e.target.closest('[data-preview]')) { const p = read(); const pv = sheet(`<header><span class="eyebrow">Preview</span><button class="x" aria-label="Close">×</button></header><article class="mvbody art"><h2 class="hv">${esc(p.title)}</h2>${p.summary ? `<p class="lede">${inline(p.summary)}</p>` : ''}${md(p.body)}</article>`); pv.addEventListener('click', ev => { if (ev.target === pv || ev.target.closest('.x')) pv.close(); }); }
+    if (e.target.closest('[data-del]')) { if (!confirmTap(e.target.closest('[data-del]'))) return; try { await cloud.deleteArticle(a.id); articles = articles.filter(x => x.id !== a.id); s.close(); render(); toast('Article deleted'); } catch (err) { toast(err.message); } }
+  });
+  f.addEventListener('submit', async e => { e.preventDefault(); const btn = f.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
+    try { const saved = await cloud.saveArticle(read()); articles = [...(articles || []).filter(x => x.id !== saved.id), saved].sort((x, y) => x.sort - y.sort); s.close(); state.tab = 'learn'; render(); toast(saved.published ? 'Published' : 'Saved as draft'); }
+    catch (err) { btn.disabled = false; btn.textContent = 'Save'; toast(err.message); } });
+}
+// Two-tap confirm without browser dialogs.
+function confirmTap(btn) { if (btn.dataset.armed) return true; btn.dataset.armed = '1'; const t = btn.textContent; btn.textContent = 'Tap again to confirm'; setTimeout(() => { delete btn.dataset.armed; btn.textContent = t; }, 3000); return false; }
+
+/* ---------------- Challenges admin ---------------- */
+const PACT_ICONS = ['check', 'protein', 'move', 'water', 'fiber', 'sleep'];
+function editPact(p = {}) {
+  const isNew = !p.id;
+  const s = sheet(`<header><span class="hv">${isNew ? 'New challenge' : 'Edit challenge'}</span><button class="x" aria-label="Close">×</button></header>
+    <form class="mvbody adm-form" id="pact-form">
+      <label>Name<input class="inp" name="title" maxlength="60" required value="${esc(p.title || '')}"></label>
+      <label>Goal (one line)<input class="inp" name="goal" maxlength="140" required value="${esc(p.goal || '')}"></label>
+      <div class="row2"><label>Days<input class="inp" name="days" type="number" min="7" max="90" value="${p.days || 30}"></label>
+        <label>Icon<select class="inp" name="icon">${PACT_ICONS.map(i => `<option ${i === (p.icon || 'check') ? 'selected' : ''}>${i}</option>`).join('')}</select></label></div>
+      <div class="row2"><label>Order<input class="inp" name="sort" type="number" value="${p.sort ?? 10}"></label>
+        <label class="check"><input type="checkbox" name="members_only" ${p.members_only ? 'checked' : ''}> <span>Package members only</span></label></div>
+      <div class="btnrow"><button class="btn sun" type="submit">Save</button>${isNew ? '' : `<button class="btn ghost" type="button" data-toggle="1">${p.active === false ? 'Restart challenge' : 'End challenge'}</button>`}</div>
+    </form>`);
+  const f = s.querySelector('#pact-form');
+  const read = (extra = {}) => { const d = Object.fromEntries(new FormData(f)); return { id: p.id, title: d.title.trim(), goal: d.goal.trim(), days: Math.min(90, Math.max(7, +d.days || 30)), icon: d.icon, sort: +d.sort || 10, members_only: !!d.members_only, active: p.active !== false, ...extra }; };
+  const save = async row => { try { await cloud.savePact(row); s.close(); pactData = null; loadPacts(); toast('Saved'); } catch (err) { toast(err.message); } };
+  s.addEventListener('click', e => { if (e.target === s || e.target.closest('.x')) { s.close(); return; }
+    const t = e.target.closest('[data-toggle]'); if (t && confirmTap(t)) save(read({ active: p.active === false })); });
+  f.addEventListener('submit', e => { e.preventDefault(); save(read()); });
+}
+
 /* ---------------- Video overlays (promo before sign-up, explainer after first login) ---------------- */
 const VIDEOS = {
   promo: { src: '/media/promo.mp4', poster: '/media/promo.jpg', cta: 'Get started →', label: 'Quick tour' },
@@ -1045,7 +1142,7 @@ function maybeExplainer() { if (state.seenExplainer || DEMO) return; state.seenE
 async function boot() {
   if (DEMO) {
     const dt = new URLSearchParams(location.search).get('tier');
-    profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', circle_active: false };
+    profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', circle_active: false, is_admin: new URLSearchParams(location.search).has('admin') };
     const cached = loadCache(); state = Object.assign(blankState(), cached || {});
     if (!cached) { seedDemo(); save(); }
     render(); return;
