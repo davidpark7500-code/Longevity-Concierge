@@ -79,7 +79,7 @@ export const MEMBERSHIP = {
     { t: '$40 off your monthly order', min: true },
     { t: 'Free ground shipping and priority processing', min: true },
     { t: 'A free product each month from an eligible selection', min: true },
-    { t: '30% off Avellum peptides' },
+    { t: '30% off peptides' },
     { t: '50% off the Valdura app' },
     { t: '$10 off other Support Solutions' },
     { t: 'Quarterly loyalty rewards and promos' },
