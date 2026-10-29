@@ -11,9 +11,10 @@ export const CONCIERGE = {
 export const NAMES = {
   tab: 'Check-In',          // bottom tab
   feed: 'The Check-In',     // public feed everyone can post to
-  pacts: 'Pacts',           // goal groups
-  kept: 'Kept',             // paid inner circle
-  keptLine: 'The members-only group for people who follow through.',
+  challenges: 'Challenges', // goal groups
+  paid: 'Circle',           // paid inner circle ("Circle member", "Circle Live")
+  paidThe: 'the Circle',    // with the article ("Join the Circle")
+  paidLine: 'The members-only inner circle for people who follow through.',
 };
 
 // The three product packages (keys stay essentials/performance/longevity in the database; names show in the app).
@@ -42,7 +43,7 @@ export const PACKAGES = {
       { name: 'XS Creatine + HMB', how: 'Creatine and HMB to pair with your strength training.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Creatine + HMB'],
-    perks: ['Everything in Ease, plus XS Creatine + HMB', 'Kept included', 'Kept Live sessions'],
+    perks: ['Everything in Ease, plus XS Creatine + HMB', 'The Circle included', 'Circle Live sessions'],
     reorderDays: 30,
   },
   longevity: {
@@ -57,7 +58,7 @@ export const PACKAGES = {
       { name: 'XS Creatine', how: 'Creatine to pair with your strength training.' },
     ],
     daily: ['Prebiotic fiber', 'Meal shake', 'Double X multivitamin', 'Muscle Multiplier', 'Creatine'],
-    perks: ['Everything in Ease, plus Double X, Muscle Multiplier and Creatine', 'Kept included', 'Monthly 1:1 with your concierge'],
+    perks: ['Everything in Ease, plus Double X, Muscle Multiplier and Creatine', 'The Circle included', 'Monthly 1:1 with your concierge'],
     reorderDays: 30,
   },
 };

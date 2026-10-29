@@ -54,7 +54,7 @@ const LESSONS = [
 ];
 const TILE_COLORS = ['lilac', 'butter', 'mint', 'peach'];
 const TIERS = {
-  free: { name: 'Free', items: ['Daily habit tracker and food log', `Post to ${NAMES.feed} and join ${NAMES.pacts.toLowerCase()}`, 'Habit coach (lighter daily limit)'] },
+  free: { name: 'Free', items: ['Daily habit tracker and food log', `Post to ${NAMES.feed} and join ${NAMES.challenges.toLowerCase()}`, 'Habit coach (lighter daily limit)'] },
   ...Object.fromEntries(Object.entries(PACKAGES).map(([k, p]) => [k, { name: p.name, items: [p.tagline, ...p.perks] }])),
 };
 const WINS = ['', 'Hit my protein', 'First workout', 'New streak', 'Tried a new recipe', 'Drank all my water'];
@@ -241,30 +241,30 @@ function learn() {
   </div>`;
 }
 
-/* ---------------- Community: The Check-In, Pacts, Kept ---------------- */
+/* ---------------- Community: The Check-In, Challenges, the Circle ---------------- */
 const FACE = ['var(--butter)', 'var(--mint)', 'var(--peach)', 'var(--lilac)', 'var(--sun)'];
 const faceColor = s => FACE[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % FACE.length];
 function ago(iso) { const s = (Date.now() - new Date(iso)) / 1000; if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm'; if (s < 86400) return Math.round(s / 3600) + 'h'; return Math.round(s / 86400) + 'd'; }
 function circle() {
   const access = hasCircle(), feed = access ? state.feed : 'wins';
   const g = groupInfo;
-  const keptTile = access ? `<div class="tile dark live s4">${badge('PROMISES KEPT • MEMBERS ONLY • ')}
-      <span class="eyebrow livedot">${esc(g?.next_call || NAMES.kept + ' Live')}</span>
-      <b class="hv">${NAMES.kept}<span class="accent">.</span></b>
-      <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join ${NAMES.kept} Live</a>` : `<small>You’re a ${NAMES.kept} member. Live session links show up here.</small>`}</div></div>`
-    : `<div class="tile lilac join s4"><span class="eyebrow">${NAMES.kept} · members only</span><b class="hv">Promises kept<span class="accent">.</span></b>
-      <p>${esc(NAMES.keptLine)}</p>
-      <ul><li>${NAMES.kept} Live: members-only Q&amp;A sessions with replays</li><li>Members-only pacts</li><li>A private group for people on the same path</li><li>A ${NAMES.kept} badge on your check-ins</li></ul>
-      ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.kept} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
+  const keptTile = access ? `<div class="tile dark live s4">${badge('THE CIRCLE • MEMBERS ONLY • ')}
+      <span class="eyebrow livedot">${esc(g?.next_call || NAMES.paid + ' Live')}</span>
+      <b class="hv">The Circle<span class="accent">.</span></b>
+      <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join ${NAMES.paid} Live</a>` : `<small>You’re a ${NAMES.paid} member. Live session links show up here.</small>`}</div></div>`
+    : `<div class="tile lilac join s4"><span class="eyebrow">Members only</span><b class="hv">The Circle<span class="accent">.</span></b>
+      <p>${esc(NAMES.paidLine)}</p>
+      <ul><li>${NAMES.paid} Live: members-only Q&amp;A sessions with replays</li><li>Members-only challenges</li><li>A private group for people on the same path</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
+      ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.paid} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
       <small>Included with the ${PACKAGES.performance.name} and ${PACKAGES.longevity.name} packages.</small></div>`;
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">The</span><span class="hv">check-in<span class="accent">.</span></span></h1></div>
     ${keptTile}
-    <div class="s4 sec"><h2><span class="hv">${NAMES.pacts}</span></h2><span class="hand">join one, check in daily</span></div>
+    <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2><span class="hand">join one, check in daily</span></div>
     <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
-    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My ${NAMES.kept} group</button></div>
+    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My ${NAMES.paid} group</button></div>
     <div class="tile s4 composer"><label class="eyebrow" for="post-body">Check in</label>
-      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared with your ${NAMES.kept} group`}"></textarea>
+      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared with your ${NAMES.paid} group`}"></textarea>
       <div class="btnrow"><select id="post-win" aria-label="Win tag">${WINS.map(w => `<option value="${esc(w)}">${w || 'No tag'}</option>`).join('')}</select><button class="btn" id="post-send">Check in</button></div></div>
     <div class="s4 feed" id="feed"><p class="status">Loading…</p></div>
     <p class="disclaim s4">Check-ins are member experiences, not medical advice. Please keep medication and dosing questions between you and your provider. Be kind.</p>
@@ -277,7 +277,7 @@ const DEMO_PACTS = [
   { id: 'dp1', title: 'Protein breakfast', goal: 'Get protein in at breakfast every day.', icon: 'protein', days: 30, members_only: false },
   { id: 'dp2', title: 'Walk 8k a day', goal: 'Hit 8,000 steps, or a 30-minute walk.', icon: 'move', days: 30, members_only: false },
   { id: 'dp3', title: 'Lights out by 10:30', goal: 'Screens down and lights out by 10:30.', icon: 'sleep', days: 21, members_only: false },
-  { id: 'dp4', title: 'Kept: 30-day reset', goal: 'All five daily habits, every day, with the Kept group.', icon: 'check', days: 30, members_only: true },
+  { id: 'dp4', title: 'Circle: 30-day reset', goal: 'All five daily habits, every day, with the Circle.', icon: 'check', days: 30, members_only: true },
 ];
 async function loadPacts() {
   const el = document.getElementById('pacts'); if (!el) return;
@@ -286,7 +286,7 @@ async function loadPacts() {
       pactData = { pacts: DEMO_PACTS.filter(p => !p.members_only || hasCircle()), stats: { dp1: [84, 31], dp2: [57, 22], dp3: [39, 0], dp4: [18, 9] }, mine: d.mine, checks: new Set(d.checks) }; }
     else pactData = await cloud.loadPacts();
     renderPacts();
-  } catch (e) { console.error(e); el.innerHTML = `<p class="status">${NAMES.pacts} are coming soon.</p>`; }
+  } catch (e) { console.error(e); el.innerHTML = `<p class="status">${NAMES.challenges} are coming soon.</p>`; }
 }
 function pactProgress(p) {
   const joined = pactData.mine[p.id]; if (!joined) return null;
@@ -296,14 +296,14 @@ function pactProgress(p) {
 }
 function renderPacts() {
   const el = document.getElementById('pacts'); if (!el || !pactData) return;
-  if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.pacts.toLowerCase()} yet.</p>`; return; }
+  if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.challenges.toLowerCase()} yet.</p>`; return; }
   el.innerHTML = pactData.pacts.map(p => {
     const pr = pactProgress(p), st = pactData.stats[p.id] || [0, 0];
     const action = !pr ? `<button class="btn" data-pact="${esc(p.id)}" data-do="join">Join</button>`
-      : pr.over ? `<span class="pact-done">${pr.done >= p.days * 0.8 ? 'Promise kept!' : 'Finished'} · ${pr.done}/${p.days}</span>`
+      : pr.over ? `<span class="pact-done">${pr.done >= p.days * 0.8 ? 'Challenge complete!' : 'Finished'} · ${pr.done}/${p.days}</span>`
       : pr.today ? `<button class="btn alt" data-pact="${esc(p.id)}" data-do="undo">${icon('check')}Checked in</button>`
       : `<button class="btn sun" data-pact="${esc(p.id)}" data-do="check">Check in today</button>`;
-    return `<div class="tile pact ${p.members_only ? 'dark' : ''}"><div class="pact-top"><span class="hico">${icon(ICONS[p.icon] ? p.icon : 'check')}</span>${p.members_only ? `<span class="pill-k">${NAMES.kept}</span>` : ''}</div>
+    return `<div class="tile pact ${p.members_only ? 'dark' : ''}"><div class="pact-top"><span class="hico">${icon(ICONS[p.icon] ? p.icon : 'check')}</span>${p.members_only ? `<span class="pill-k">${NAMES.paid}</span>` : ''}</div>
       <b>${esc(p.title)}</b><small>${esc(p.goal)}</small>
       ${pr ? `<span class="bar"><i style="width:${pr.done / p.days * 100}%"></i></span><small>Day ${pr.dayN} of ${p.days} · ${pr.done} check-in${pr.done === 1 ? '' : 's'}</small>` : `<small class="pstat">${st[0]} joined${st[1] ? ` · ${st[1]} checked in today` : ''} · ${p.days} days</small>`}
       ${action}</div>`;
@@ -315,7 +315,7 @@ async function pactAction(id, what) {
   if (what === 'join') pactData.mine[id] = day;
   if (what === 'check') pactData.checks.add(id + '|' + day);
   if (what === 'undo') pactData.checks.delete(id + '|' + day);
-  if (what === 'check') { buzz([10, 30, 14]); const pr = pactProgress(p); toast(pr && pr.done === p.days ? 'Promise kept! 🎉' : 'Checked in. Keep it going!'); }
+  if (what === 'check') { buzz([10, 30, 14]); const pr = pactProgress(p); toast(pr && pr.done === p.days ? 'Challenge complete! 🎉' : 'Checked in. Keep it going!'); }
   renderPacts();
   if (DEMO) { state.demoPacts = { mine: pactData.mine, checks: [...pactData.checks] }; save(); return; }
   try { if (what === 'join') await cloud.joinPact(id, day); else if (what === 'check') await cloud.pactCheckIn(id, day); else if (what === 'undo') await cloud.pactUndo(id, day); }
@@ -323,7 +323,7 @@ async function pactAction(id, what) {
 }
 function postTile(p) {
   const mine = user && p.user_id === user.id;
-  return `<article class="tile post s4"><header><span class="face" style="background:${faceColor(p.author_name)}">${esc((p.author_name || 'M')[0])}</span><div><b>${esc(p.author_name || 'Member')}${p.author_kept ? ` <span class="pill-k sm">${NAMES.kept}</span>` : ''}</b><small>${ago(p.created_at)} ago</small></div>${p.win ? `<span class="win">${esc(p.win)}</span>` : ''}</header>
+  return `<article class="tile post s4"><header><span class="face" style="background:${faceColor(p.author_name)}">${esc((p.author_name || 'M')[0])}</span><div><b>${esc(p.author_name || 'Member')}${p.author_kept ? ` <span class="pill-k sm">${NAMES.paid}</span>` : ''}</b><small>${ago(p.created_at)} ago</small></div>${p.win ? `<span class="win">${esc(p.win)}</span>` : ''}</header>
   <p>${esc(p.body)}</p><div class="acts"><button class="cheer ${p.cheered ? 'on' : ''}" data-cheer="${esc(p.id)}">Cheer · ${p.cheer_count}</button>${mine || profile?.is_admin ? `<button class="cheer" data-delpost="${esc(p.id)}">Delete</button>` : ''}</div></article>`;
 }
 let feedPosts = [];
@@ -345,9 +345,9 @@ async function loadFeed() {
 const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
 function plan() {
   const tier = tierKey(), pk = PACKAGES[tier], c = concierge();
-  const keptLine = profile?.circle_active ? `<p>You’re a ${NAMES.kept} member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
-    : hasCircle() ? `<p>${NAMES.kept} is included with your package.</p>`
-    : `<p>Not a ${NAMES.kept} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.kept}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
+  const keptLine = profile?.circle_active ? `<p>You’re a ${NAMES.paid} member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
+    : hasCircle() ? `<p>The Circle is included with your package.</p>`
+    : `<p>Not a ${NAMES.paid} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.paidThe}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
   const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
   const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, true)}
       <div class="prods">${pk.products.map(p => `<div class="prod"><b>${esc(p.name)}</b><small>${esc(p.how)}</small></div>`).join('')}</div>
@@ -371,7 +371,7 @@ function featuredTile(others, tier) {
   const k = FEATURED.key, pk = PACKAGES[k]; if (!pk || !others.includes(k)) return '';
   const m = monthly(pk), cur = PACKAGES[tier];
   const diff = cur ? m.total - monthly(cur).total : null;
-  const why = m.off ? `Includes ${money(m.off)} off every month, free shipping, $50 in free product and ${NAMES.kept}.` : `Includes ${NAMES.kept}.`;
+  const why = m.off ? `Includes ${money(m.off)} off every month, free shipping, $50 in free product and ${NAMES.paidThe}.` : `Includes ${NAMES.paidThe}.`;
   return `<div class="tile dark plan feat-pkg s4"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, false)}
     <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${list(pk.perks)}
     ${contactBtn('btn sun', 'Ask about ' + pk.name)}</div>`;
@@ -830,7 +830,7 @@ async function openAdmin() {
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
         <div class="flabel">Members (${d.members.length})</div>
-        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.kept + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
+        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.paid + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></div>`).join('')}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
@@ -895,7 +895,7 @@ function desktopScreen() {
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
       <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate or snap a photo. Totals use USDA nutrition data.</p></div>
       <div class="tile desk-feat mint"><b class="hv">Habit coach</b><p>Friendly nudges and simple meal ideas when you need them.</p></div>
-      <div class="tile desk-feat lilac"><b class="hv">Check-ins</b><p>Pacts, cheers and people on the same path.</p></div>
+      <div class="tile desk-feat lilac"><b class="hv">Check-ins</b><p>Challenges, cheers and people on the same path.</p></div>
       <div class="tile desk-steps"><span class="eyebrow">How to get the app</span>
         <ol class="steps"><li>Open the link on your phone.</li><li>Add it to your home screen. The page shows you how on iPhone and Android.</li><li>Open <b>LongevityCo</b> from your home screen and sign up.</li></ol></div>
     </div>
@@ -982,7 +982,7 @@ async function startSession(session) {
   state = Object.assign(blankState(), remote || cached || {});
   state.tab = 'today';
   const params = new URLSearchParams(location.search);
-  if (params.get('circle') === 'joined') { state.tab = 'circle'; toast(`Welcome to ${NAMES.kept}!`); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
+  if (params.get('circle') === 'joined') { state.tab = 'circle'; toast(`Welcome to ${NAMES.paidThe}!`); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
   if (params.has('circle')) history.replaceState(null, '', location.pathname);
   try { const c = await cloud.loadConcierges(user.id, profile.concierge_id); myConcierge = c.mine; selfConcierge = c.self; } catch (e) { console.error(e); }
   if (!profile.first_name || !profile.accepted_at) return onboarding();

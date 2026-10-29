@@ -1,4 +1,4 @@
--- Community v2: open Check-In feed, Pacts (goal groups), Kept (paid inner circle). Run after schema.sql + hardening.sql. Safe to re-run.
+-- Community v2: open Check-In feed, Challenges (goal groups, table name pacts), the Circle (paid inner circle). Run after schema.sql + hardening.sql. Safe to re-run.
 
 -- 1. Everyone can post to the public Check-In feed; group posts stay Kept-only.
 drop policy if exists "circle members post" on public.posts;
@@ -8,7 +8,7 @@ create policy "members post" on public.posts for insert with check (
     or ((select public.has_circle((select auth.uid()))) and group_id = (select p.group_id from public.profiles p where p.id = (select auth.uid())))
   )
 );
--- Show a Kept badge on posts from paid members (set by the server, not the client).
+-- Show a Circle badge on posts from paid members (set by the server, not the client).
 alter table public.posts add column if not exists author_kept boolean not null default false;
 create or replace function public.post_defaults() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -28,7 +28,7 @@ create table if not exists public.pacts (
   goal text not null check (char_length(goal) <= 140),
   icon text not null default 'check',
   days int not null default 30 check (days between 7 and 90),
-  members_only boolean not null default false,   -- Kept-only pacts
+  members_only boolean not null default false,   -- Circle-only challenges
   active boolean not null default true,
   sort int not null default 0,
   created_at timestamptz not null default now()
@@ -92,6 +92,6 @@ select * from (values
   ('Walk 8k a day', 'Hit 8,000 steps, or a 30-minute walk.', 'move', 30, false, 2),
   ('Strength 3x a week', 'Do a strength session three times a week. Check in on the days you train.', 'move', 30, false, 3),
   ('Lights out by 10:30', 'Screens down and lights out by 10:30.', 'sleep', 21, false, 4),
-  ('Kept: 30-day reset', 'All five daily habits, every day, with the Kept group.', 'check', 30, true, 5)
+  ('Circle: 30-day reset', 'All five daily habits, every day, with the Circle.', 'check', 30, true, 5)
 ) v(title, goal, icon, days, members_only, sort)
 where not exists (select 1 from public.pacts);
