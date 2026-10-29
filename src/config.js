@@ -73,7 +73,17 @@ export const MEMBERSHIP = {
   fee: 20,
   discount: 40,
   minOrder: 150,        // the $40 off only applies to product orders of $150+ (so not Ease)
-  perks: ['$40 off your monthly order', 'Free shipping', '$50 in free product', '30% off Avellum peptides', '50% off the Valdura app'],
+  // min: true = only with a qualifying $150+ monthly order (per Amway's member sheet).
+  perks: [
+    { t: '$40 off your monthly order', min: true },
+    { t: 'Free ground shipping and priority processing', min: true },
+    { t: 'A free product each month from an eligible selection', min: true },
+    { t: '30% off Avellum peptides' },
+    { t: '50% off the Valdura app' },
+    { t: '$10 off other Support Solutions' },
+    { t: 'Quarterly loyalty rewards and promos' },
+  ],
+  note: 'New Registered Customers get their first month of membership free.',
 };
 export function monthly(pkg) {
   const off = pkg.retail >= MEMBERSHIP.minOrder ? MEMBERSHIP.discount : 0;

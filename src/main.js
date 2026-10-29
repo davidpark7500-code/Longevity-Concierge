@@ -381,8 +381,8 @@ function priceBlock(pk, full) {
   const math = `${money(m.retail)} products + ${money(m.fee)} membership${m.off ? ` − ${money(m.off)} member discount` : ''}`;
   return `<div class="pblock"><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="pmath">${math}</span></div>`;
 }
-const memberPerks = pk => MEMBERSHIP.perks.filter(x => monthly(pk).off || !x.startsWith('$' + MEMBERSHIP.discount + ' off'));
-const perksBlock = pk => `${list(pk.perks)}<div class="mperks"><span class="eyebrow">${esc(MEMBERSHIP.name)} perks</span>${list(memberPerks(pk))}</div>`;
+const memberPerks = pk => MEMBERSHIP.perks.filter(x => monthly(pk).qualifies || !x.min).map(x => x.t);
+const perksBlock = pk => `${list(pk.perks)}<div class="mperks"><span class="eyebrow">${esc(MEMBERSHIP.name)} perks</span>${list(memberPerks(pk))}${monthly(pk).qualifies ? '' : `<small class="mnote">The $${MEMBERSHIP.discount} off, free shipping and free product need a $${MEMBERSHIP.minOrder}+ order.</small>`}<small class="mnote">${esc(MEMBERSHIP.note)}</small></div>`;
 function reorderText() {
   const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';
   const left = Math.round((new Date(state.pkgOrdered + 'T12:00:00') - new Date()) / 864e5) + pk.reorderDays;
