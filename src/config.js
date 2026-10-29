@@ -14,7 +14,7 @@ export const NAMES = {
   challenges: 'Challenges', // goal groups
   paid: 'Circle',           // paid inner circle ("Circle member", "Circle Live")
   paidThe: 'the Circle',    // with the article ("Join the Circle")
-  paidLine: 'The members-only inner circle for people who follow through.',
+  paidLine: 'Accountability and community to help you reach your wellness goals.',
 };
 
 // The three product packages (keys stay essentials/performance/longevity in the database; names show in the app).
