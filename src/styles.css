@@ -499,3 +499,5 @@ body.sheet-open .toast.in{transform:translate(-50%,0)}
 .join p{margin:0}
 .price{font-family:var(--mono);font-size:13px;letter-spacing:.04em;opacity:.8}
 .conc .face .osun{width:30px;height:30px;transform:none;margin:0}
+.pblock{display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}.ptot{font-size:40px}.ptot small{font-size:18px;margin-left:2px;font-weight:600}.pmath{font-size:12px;line-height:1.35;opacity:.8}
+.plan:not(.current) .ptot{font-size:32px}
