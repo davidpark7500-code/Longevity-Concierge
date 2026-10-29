@@ -249,7 +249,7 @@ function learn() {
     return `<button class="tile lesson ${TILE_COLORS[i % 4]} ${wide ? 's4 wide' : 's2'}" data-article="${esc(l.id)}"><span class="glyph">${icon(ICONS[l.icon] ? l.icon : 'protein')}</span><span class="tag">${esc(l.cat)}${l.published ? '' : ' · Draft'}</span><b>${esc(l.title)}</b><span class="min">${l.minutes} min read</span></button>`; }).join('');
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">Learn the</span><span class="hv"><span class="scrib accent">why${scrib}</span>.</span></h1><p>Short, research-informed reads you can finish in minutes.</p></div>
-    <button class="tile dark s4 howto" type="button" data-video="explainer"><span class="hico">${icon('play')}</span><span><span class="eyebrow">How the app works</span><b>Watch the 50-second tour</b></span></button>
+    <button class="tile dark s4 howto" type="button" data-video="explainer"><span class="hico">${icon('play')}</span><span><span class="eyebrow">How the app works</span><b>Watch the 1-minute tour</b></span></button>
     ${isAdmin() ? `<button class="tile paper s4 adm-add" data-article-new="1">${icon('pen')}<span><b>New article</b><small>Admins only · write, preview, publish</small></span></button>` : ''}
     <div class="s4 chips" role="tablist">${cats.map(c => `<button class="chip ${state.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
     ${f ? `<button class="tile lesson feat s4 halftone" data-article="${esc(f.id)}"><canvas data-scene="${['dawn', 'meadow', 'dusk'][(f.sort || 0) % 3]}"></canvas><span class="sticker">${f.published ? 'New' : 'Draft'}</span>
@@ -1097,7 +1097,7 @@ function editPact(p = {}) {
 /* ---------------- Video overlays (promo before sign-up, explainer after first login) ---------------- */
 const VIDEOS = {
   promo: { src: '/media/promo.mp4', poster: '/media/promo.jpg', cta: 'Get started →', label: 'Quick tour' },
-  explainer: { src: '/media/explainer.mp4', poster: '/media/explainer.jpg', cta: 'Let’s go →', label: 'How it works' },
+  explainer: { src: '/media/explainer.mp4?v=2', poster: '/media/explainer.jpg', cta: 'Let’s go →', label: 'How it works' },
 };
 function playVideo(key, onDone) {
   const v = VIDEOS[key]; document.querySelector('.vidov')?.remove();
