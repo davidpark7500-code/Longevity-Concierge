@@ -13,6 +13,7 @@ import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
 import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
+import { CONCIERGE, NAMES, PACKAGES, VALDURA } from './config.js';
 // App feel on iOS: Safari ignores user-scalable=no, so block pinch and double-tap zoom here too.
 if (typeof document !== 'undefined') {
   ['gesturestart', 'gesturechange'].forEach(e => document.addEventListener(e, ev => ev.preventDefault(), { passive: false }));
@@ -53,10 +54,8 @@ const LESSONS = [
 ];
 const TILE_COLORS = ['lilac', 'butter', 'mint', 'peach'];
 const TIERS = {
-  free: { name: 'Free', items: ['Habit tracker and food log', 'Food finder and move library', 'AI coach (lighter daily limit)', 'Read the Wins feed and cheer others on'] },
-  essentials: { name: 'Essentials', items: ['Protein + fiber support bundle', 'Everything in Free', 'Add the Circle any time'] },
-  performance: { name: 'Performance', items: ['Multivitamin + hydration added', 'The Circle included', 'Weekly group check-in call', 'Monthly challenges'] },
-  longevity: { name: 'Longevity', items: ['Omega-3 + protein snacks added', 'The Circle included', 'Monthly 1:1 check-in', 'First access to workshops and challenges'] },
+  free: { name: 'Free', items: ['Daily habit tracker and food log', `Post to ${NAMES.feed} and join ${NAMES.pacts.toLowerCase()}`, 'Habit coach (lighter daily limit)'] },
+  ...Object.fromEntries(Object.entries(PACKAGES).map(([k, p]) => [k, { name: p.name, items: [p.tagline, ...p.perks] }])),
 };
 const WINS = ['', 'Hit my protein', 'First workout', 'New streak', 'Tried a new recipe', 'Drank all my water'];
 const DEMO_POSTS = [
@@ -103,6 +102,9 @@ const icon = (k, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidd
 const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
 const hasCircle = () => !!profile && (profile.circle_active || ['performance', 'longevity'].includes(profile.tier));
+const tierKey = () => (profile && profile.tier) || 'free';
+const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name, contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
+const contactBtn = (cls = 'btn', text) => { const c = concierge(); return c.contact ? `<a class="${cls}" href="${esc(c.contact)}" ${/^https:/.test(c.contact) ? 'target="_blank" rel="noopener"' : ''}>${esc(text || c.label)}</a>` : ''; };
 
 /* ---------------- Dates, days, streaks ---------------- */
 function dayKeyOf(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
@@ -188,11 +190,32 @@ function today() {
     <div class="tile paper week s2"><span class="eyebrow">This week</span><div class="dots">${week}</div></div>
     <div class="s4 sec"><h2><span class="hv">Today’s</span><span class="lt">habits</span></h2><span class="hand">tap to log</span></div>
     ${HABITS.map((h, i) => habitTile(h, i === 0)).join('')}
+    ${packageTile()}
     ${foodSummaryTile()}
     ${movesTile()}
+    ${conciergeTile()}
     <div class="tile coach s4"><span class="tape"></span><span class="eyebrow">A note from your coach</span><p class="hand">${nudge}</p><button class="btn-ink" id="open-coach">Ask your coach →</button></div>
     <p class="disclaim s4">General wellness education only, not medical advice. Your licensed provider makes all medical decisions.</p>
   </div>`;
+}
+
+function packageTile() {
+  const k = tierKey(), pk = PACKAGES[k];
+  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the Essentials, Performance and Longevity packages →</span></button>`;
+  const c = counts();
+  const items = pk.daily.map((d, i) => { const on = !!c['pkg' + i]; return `<button class="pchk${on ? ' on' : ''}" data-pkg="${i}" aria-pressed="${on}"><span class="box">${on ? icon('check') : ''}</span>${esc(d)}</button>`; }).join('');
+  const done = pk.daily.filter((_, i) => c['pkg' + i]).length;
+  return `<div class="tile butter s4 pkg"><div class="mrow"><span class="eyebrow">Your ${esc(pk.name)} package · today</span><span class="hand">${done}/${pk.daily.length}</span></div><div class="pchks">${items}</div>${reorderLine()}</div>`;
+}
+function reorderLine() {
+  const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';
+  const left = Math.round((new Date(state.pkgOrdered + 'T12:00:00') - new Date()) / 864e5) + pk.reorderDays;
+  if (left > 5) return '';
+  return `<p class="reorder">${left > 0 ? `About ${left} day${left === 1 ? '' : 's'} left in this order.` : 'Time to reorder.'} ${contactBtn('linkbtn', 'Reorder with ' + concierge().name + ' →')}</p>`;
+}
+function conciergeTile() {
+  const c = concierge();
+  return `<div class="tile lilac s4 conc"><span class="face" style="background:var(--butter)">${esc(c.name[0] || 'C')}</span><div><span class="eyebrow">Your concierge</span><b>${esc(c.name)}</b><small>Questions about your package, a reorder, or just stuck? Reach out.</small></div>${contactBtn('btn', c.contact ? 'Message' : '')}</div>`;
 }
 
 /* ---------------- Learn ---------------- */
@@ -217,41 +240,95 @@ function learn() {
   </div>`;
 }
 
-/* ---------------- Circle (community) ---------------- */
+/* ---------------- Community: The Check-In, Pacts, Kept ---------------- */
 const FACE = ['var(--butter)', 'var(--mint)', 'var(--peach)', 'var(--lilac)', 'var(--sun)'];
 const faceColor = s => FACE[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % FACE.length];
 function ago(iso) { const s = (Date.now() - new Date(iso)) / 1000; if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm'; if (s < 86400) return Math.round(s / 3600) + 'h'; return Math.round(s / 86400) + 'd'; }
 function circle() {
   const access = hasCircle(), feed = access ? state.feed : 'wins';
   const g = groupInfo;
-  const groupTile = access ? `<div class="tile dark live s4">${badge('YOUR CIRCLE • WEEKLY CHECK-IN • ')}
-      <span class="eyebrow livedot">${esc(g?.next_call || 'Weekly group check-in')}</span>
-      <b class="hv">${esc(g?.name || 'Your Circle')}</b>
-      <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join the call</a>` : '<small>Your call link will show up here.</small>'}</div></div>`
-    : `<div class="tile lilac join s4"><span class="eyebrow">The Circle</span><b class="hv">Find your people.</b>
-      <ul><li>A small accountability group of people on the same path</li><li>Weekly group check-in call</li><li>Monthly challenges and meal-prep guides</li><li>Post and cheer in your private group</li></ul>
-      ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Join the Circle${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
+  const keptTile = access ? `<div class="tile dark live s4">${badge('PROMISES KEPT • MEMBERS ONLY • ')}
+      <span class="eyebrow livedot">${esc(g?.next_call || NAMES.kept + ' Live')}</span>
+      <b class="hv">${NAMES.kept}<span class="accent">.</span></b>
+      <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join ${NAMES.kept} Live</a>` : `<small>You’re a ${NAMES.kept} member. Live session links show up here.</small>`}</div></div>`
+    : `<div class="tile lilac join s4"><span class="eyebrow">${NAMES.kept} · members only</span><b class="hv">Promises kept<span class="accent">.</span></b>
+      <p>${esc(NAMES.keptLine)}</p>
+      <ul><li>${NAMES.kept} Live: members-only Q&amp;A sessions with replays</li><li>Members-only pacts</li><li>A private group for people on the same path</li><li>A ${NAMES.kept} badge on your check-ins</li></ul>
+      ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.kept} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
       <small>Included with the Performance and Longevity packages.</small></div>`;
   return top() + `<div class="bento">
-    <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">circle<span class="accent">.</span></span></h1></div>
-    ${groupTile}
-    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Wins feed</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My group</button></div>
-    ${access ? `<div class="tile s4 composer"><label class="eyebrow" for="post-body">Share a win or ask for support</label>
-      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'Shared with all members' : 'Shared with your group'}"></textarea>
-      <div class="btnrow"><select id="post-win" aria-label="Win tag">${WINS.map(w => `<option value="${esc(w)}">${w || 'No tag'}</option>`).join('')}</select><button class="btn" id="post-send">Post</button></div></div>`
-      : '<p class="s4 status">Anyone can read the Wins feed and cheer. Circle members can post and join a private group.</p>'}
+    <div class="s4 title"><h1 class="mix"><span class="lt">The</span><span class="hv">check-in<span class="accent">.</span></span></h1></div>
+    ${keptTile}
+    <div class="s4 sec"><h2><span class="hv">${NAMES.pacts}</span></h2><span class="hand">join one, check in daily</span></div>
+    <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
+    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My ${NAMES.kept} group</button></div>
+    <div class="tile s4 composer"><label class="eyebrow" for="post-body">Check in</label>
+      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared with your ${NAMES.kept} group`}"></textarea>
+      <div class="btnrow"><select id="post-win" aria-label="Win tag">${WINS.map(w => `<option value="${esc(w)}">${w || 'No tag'}</option>`).join('')}</select><button class="btn" id="post-send">Check in</button></div></div>
     <div class="s4 feed" id="feed"><p class="status">Loading…</p></div>
-    <p class="disclaim s4">Posts are member experiences, not medical advice. Please keep medication and dosing questions between you and your provider. Be kind.</p>
+    <p class="disclaim s4">Check-ins are member experiences, not medical advice. Please keep medication and dosing questions between you and your provider. Be kind.</p>
   </div>`;
+}
+
+/* ---- Pacts ---- */
+let pactData = null;
+const DEMO_PACTS = [
+  { id: 'dp1', title: 'Protein breakfast', goal: 'Get protein in at breakfast every day.', icon: 'protein', days: 30, members_only: false },
+  { id: 'dp2', title: 'Walk 8k a day', goal: 'Hit 8,000 steps, or a 30-minute walk.', icon: 'move', days: 30, members_only: false },
+  { id: 'dp3', title: 'Lights out by 10:30', goal: 'Screens down and lights out by 10:30.', icon: 'sleep', days: 21, members_only: false },
+  { id: 'dp4', title: 'Kept: 30-day reset', goal: 'All five daily habits, every day, with the Kept group.', icon: 'check', days: 30, members_only: true },
+];
+async function loadPacts() {
+  const el = document.getElementById('pacts'); if (!el) return;
+  try {
+    if (DEMO) { const d = state.demoPacts || (state.demoPacts = { mine: { dp1: dayKeyOf(new Date(Date.now() - 6 * 864e5)) }, checks: [] });
+      pactData = { pacts: DEMO_PACTS.filter(p => !p.members_only || hasCircle()), stats: { dp1: [84, 31], dp2: [57, 22], dp3: [39, 0], dp4: [18, 9] }, mine: d.mine, checks: new Set(d.checks) }; }
+    else pactData = await cloud.loadPacts();
+    renderPacts();
+  } catch (e) { console.error(e); el.innerHTML = `<p class="status">${NAMES.pacts} are coming soon.</p>`; }
+}
+function pactProgress(p) {
+  const joined = pactData.mine[p.id]; if (!joined) return null;
+  const start = new Date(joined + 'T12:00:00'), dayN = Math.floor((new Date() - start) / 864e5) + 1;
+  let done = 0; for (let i = 0; i < Math.min(dayN, p.days); i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (pactData.checks.has(p.id + '|' + dayKeyOf(d))) done++; }
+  return { dayN: Math.min(dayN, p.days), done, over: dayN > p.days, today: pactData.checks.has(p.id + '|' + todayKey()) };
+}
+function renderPacts() {
+  const el = document.getElementById('pacts'); if (!el || !pactData) return;
+  if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.pacts.toLowerCase()} yet.</p>`; return; }
+  el.innerHTML = pactData.pacts.map(p => {
+    const pr = pactProgress(p), st = pactData.stats[p.id] || [0, 0];
+    const action = !pr ? `<button class="btn" data-pact="${esc(p.id)}" data-do="join">Join</button>`
+      : pr.over ? `<span class="pact-done">${pr.done >= p.days * 0.8 ? 'Promise kept!' : 'Finished'} · ${pr.done}/${p.days}</span>`
+      : pr.today ? `<button class="btn alt" data-pact="${esc(p.id)}" data-do="undo">${icon('check')}Checked in</button>`
+      : `<button class="btn sun" data-pact="${esc(p.id)}" data-do="check">Check in today</button>`;
+    return `<div class="tile pact ${p.members_only ? 'dark' : ''}"><div class="pact-top"><span class="hico">${icon(ICONS[p.icon] ? p.icon : 'check')}</span>${p.members_only ? `<span class="pill-k">${NAMES.kept}</span>` : ''}</div>
+      <b>${esc(p.title)}</b><small>${esc(p.goal)}</small>
+      ${pr ? `<span class="bar"><i style="width:${pr.done / p.days * 100}%"></i></span><small>Day ${pr.dayN} of ${p.days} · ${pr.done} check-in${pr.done === 1 ? '' : 's'}</small>` : `<small class="pstat">${st[0]} joined${st[1] ? ` · ${st[1]} checked in today` : ''} · ${p.days} days</small>`}
+      ${action}</div>`;
+  }).join('');
+}
+async function pactAction(id, what) {
+  const p = pactData && pactData.pacts.find(x => String(x.id) === String(id)); if (!p) return;
+  const day = todayKey();
+  if (what === 'join') pactData.mine[id] = day;
+  if (what === 'check') pactData.checks.add(id + '|' + day);
+  if (what === 'undo') pactData.checks.delete(id + '|' + day);
+  if (what === 'check') { buzz([10, 30, 14]); const pr = pactProgress(p); toast(pr && pr.done === p.days ? 'Promise kept! 🎉' : 'Checked in. Keep it going!'); }
+  renderPacts();
+  if (DEMO) { state.demoPacts = { mine: pactData.mine, checks: [...pactData.checks] }; save(); return; }
+  try { if (what === 'join') await cloud.joinPact(id, day); else if (what === 'check') await cloud.pactCheckIn(id, day); else if (what === 'undo') await cloud.pactUndo(id, day); }
+  catch (e) { console.error(e); toast('Couldn’t save that. Try again.'); loadPacts(); }
 }
 function postTile(p) {
   const mine = user && p.user_id === user.id;
-  return `<article class="tile post s4"><header><span class="face" style="background:${faceColor(p.author_name)}">${esc((p.author_name || 'M')[0])}</span><div><b>${esc(p.author_name || 'Member')}</b><small>${ago(p.created_at)} ago</small></div>${p.win ? `<span class="win">${esc(p.win)}</span>` : ''}</header>
+  return `<article class="tile post s4"><header><span class="face" style="background:${faceColor(p.author_name)}">${esc((p.author_name || 'M')[0])}</span><div><b>${esc(p.author_name || 'Member')}${p.author_kept ? ` <span class="pill-k sm">${NAMES.kept}</span>` : ''}</b><small>${ago(p.created_at)} ago</small></div>${p.win ? `<span class="win">${esc(p.win)}</span>` : ''}</header>
   <p>${esc(p.body)}</p><div class="acts"><button class="cheer ${p.cheered ? 'on' : ''}" data-cheer="${esc(p.id)}">Cheer · ${p.cheer_count}</button>${mine || profile?.is_admin ? `<button class="cheer" data-delpost="${esc(p.id)}">Delete</button>` : ''}</div></article>`;
 }
 let feedPosts = [];
 async function loadFeed() {
   const el = document.getElementById('feed'); if (!el) return;
+  if (!pactData || DEMO) loadPacts(); else renderPacts();
   try {
     if (DEMO) feedPosts = DEMO_POSTS.map(p => ({ ...p, cheered: !!(state.demoCheers || {})[p.id], cheer_count: p.cheer_count + ((state.demoCheers || {})[p.id] ? 1 : 0) }));
     else {
@@ -259,29 +336,39 @@ async function loadFeed() {
       feedPosts = await cloud.listPosts(hasCircle() && state.feed === 'group' ? profile.group_id : null);
     }
     const el2 = document.getElementById('feed'); if (!el2) return;
-    el2.innerHTML = feedPosts.length ? feedPosts.map(postTile).join('') : '<p class="status">No posts yet. Be the first to share a win!</p>';
+    el2.innerHTML = feedPosts.length ? feedPosts.map(postTile).join('') : '<p class="status">No check-ins yet. Be the first to share a win!</p>';
   } catch (e) { console.error(e); el.innerHTML = '<p class="status">Couldn’t load posts. Pull down to refresh or try again later.</p>'; }
 }
 
 /* ---------------- Plan ---------------- */
 function plan() {
-  const tier = (profile && profile.tier) || 'free', t = TIERS[tier] || TIERS.free;
-  const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
+  const tier = tierKey(), pk = PACKAGES[tier], c = concierge();
   const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
-  const circleLine = profile?.circle_active ? `<p>You’re a Circle member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
-    : hasCircle() ? '<p>The Circle is included with your package.</p>'
-    : `<p>Not a Circle member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join the Circle${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
+  const keptLine = profile?.circle_active ? `<p>You’re a ${NAMES.kept} member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
+    : hasCircle() ? `<p>${NAMES.kept} is included with your package.</p>`
+    : `<p>Not a ${NAMES.kept} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.kept}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
+  const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
+  const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>
+      <div class="prods">${pk.products.map(p => `<div class="prod"><b>${esc(p.name)}</b><small>${esc(p.how)}</small></div>`).join('')}</div>
+      <div class="ordered"><label for="pkg-ordered">Last order arrived</label><input id="pkg-ordered" type="date" class="inp" value="${esc(state.pkgOrdered || '')}"><small>${state.pkgOrdered ? reorderText() : 'Add the date and we’ll remind you when it’s time to reorder.'}</small></div>
+      <div class="circle-status">${keptLine}</div>
+      ${tier === 'longevity' && BOOKING_URL ? `<a class="btn sun" href="${esc(BOOKING_URL)}" target="_blank" rel="noopener">Book your monthly 1:1</a>` : ''}</div>`
+    : `<div class="tile dark plan current s4"><span class="eyebrow">Current</span><b class="hv">Free</b>${list(TIERS.free.items)}<div class="circle-status">${keptLine}</div></div>`;
   return top() + `<div class="bento">
-    <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">plan<span class="accent">.</span></span></h1><p>Everything you need, in one place.</p></div>
-    <div class="tile dark plan current s4"><span class="sticker">Your plan</span><span class="eyebrow">Current</span><b class="hv">${t.name}</b>${list(t.items)}
-      <div class="circle-status">${circleLine}</div>
-      ${tier === 'longevity' && BOOKING_URL ? `<a class="btn sun" href="${esc(BOOKING_URL)}" target="_blank" rel="noopener">Book your monthly 1:1</a>` : ''}</div>
-    ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">Package</span><b class="hv">${TIERS[k].name}</b>${list(TIERS[k].items)}</div>`).join('')}
-    <div class="tile lilac provider s4"><span class="eyebrow">Your concierge</span><b class="hv">${esc(myConcierge?.name || 'Your concierge')}</b><p>Packages are product bundles your concierge orders for you. Reach out to start or change one, and your app updates to match.</p>
-      ${myConcierge?.contact_url ? `<a class="btn" href="${esc(myConcierge.contact_url)}" ${/^https:/.test(myConcierge.contact_url) ? 'target="_blank" rel="noopener"' : ''}>${esc(myConcierge.contact_label || 'Contact ' + (myConcierge.name || '').split(' ')[0])}</a>` : ''}</div>
+    <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">plan<span class="accent">.</span></span></h1><p>Your package, your concierge, and what’s next.</p></div>
+    ${current}
+    ${conciergeTile()}
+    <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'The'}</span><span class="lt">packages</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
+    ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${list(PACKAGES[k].perks)}</div>`).join('')}
+    <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
-    <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease.</p>
+    <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
   </div>`;
+}
+function reorderText() {
+  const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';
+  const left = Math.round((new Date(state.pkgOrdered + 'T12:00:00') - new Date()) / 864e5) + pk.reorderDays;
+  return left > 0 ? `About ${left} day${left === 1 ? '' : 's'} until your next reorder.` : 'Time to reorder.';
 }
 
 /* ---------------- Mixed-media scenes ---------------- */
@@ -369,6 +456,7 @@ function sheet(html, cls = 'panel tall') {
 }
 
 /* ---------------- Clicks ---------------- */
+document.addEventListener('change', e => { if (e.target.id === 'pkg-ordered') { state.pkgOrdered = e.target.value || null; save(); render(); } });
 document.addEventListener('click', async e => {
   if (e.target.closest('.sheet')) return; // sheets handle their own clicks
   const tab = e.target.closest('.tab'); if (tab) { state.tab = tab.dataset.tab; save(); render(); window.scrollTo(0, 0); return; }
@@ -379,6 +467,9 @@ document.addEventListener('click', async e => {
     buzz(n === def.goal ? [10, 30, 14] : 8);
     render();
     if (n === def.goal) toast(animFrom?.perfect || (pct() === 100 && before < 100) ? 'Perfect day! Streak extended.' : 'Nice! ' + def.name + ' done.'); return; }
+  const pc = e.target.closest('[data-pkg]'); if (pc) { const c2 = counts(), k2 = 'pkg' + pc.dataset.pkg; c2[k2] = c2[k2] ? 0 : 1; buzz(8); save(); render(); return; }
+  const tg = e.target.closest('[data-tabgo]'); if (tg) { state.tab = tg.dataset.tabgo; save(); render(); window.scrollTo(0, 0); return; }
+  const pj = e.target.closest('[data-pact]'); if (pj) return pactAction(pj.dataset.pact, pj.dataset.do);
   const c = e.target.closest('[data-cat]'); if (c) { state.cat = c.dataset.cat; save(); render(); return; }
   const fd = e.target.closest('[data-feed]'); if (fd && !fd.disabled) { state.feed = fd.dataset.feed; save(); render(); return; }
   const ch = e.target.closest('[data-cheer]'); if (ch) return toggleCheer(ch.dataset.cheer);
@@ -485,7 +576,7 @@ function food() {
     <div class="s4 title"><h1 class="mix"><span class="lt">Your</span><span class="hv">food<span class="accent">.</span></span></h1></div>
     <div class="tile dark ftot s4"><span class="eyebrow">Today</span>
       <div class="tot"><div><b class="hv">${fmt(t.p)}</b><span>g protein</span></div><div><b class="hv">${fmt(t.f)}</b><span>g fiber</span></div></div>
-      <div class="btnrow"><button class="btn sun" data-log="photo" id="log-photo">${icon('camera')}Snap a meal</button><button class="btn ghost" data-log="text" id="log-text">${icon('pen')}Type it</button><button class="btn ghost" data-finder="protein">${icon('search')}Search</button></div></div>
+      <div class="btnrow"><button class="btn sun" data-log="text" id="log-text">${icon('pen')}Log a meal</button><button class="btn ghost" data-finder="protein">${icon('search')}Search</button></div></div>
     <div class="tile paper s4 relog"><span class="eyebrow">Log again in one tap</span>
       ${rec.length ? `<div class="rchips">${rec.map((r, i) => `<button class="rchip${r.fav ? ' fav' : ''}" data-relog="${i}"><span>${r.fav ? '★ ' : ''}${esc(r.label.length > 34 ? r.label.slice(0, 32) + '…' : r.label)}</span><small>${fmt(r.protein)} g</small></button>`).join('')}</div>` : '<p class="status">Meals you log show up here so you can repeat them with one tap.</p>'}</div>
     <div class="tile hist s4"><div class="mrow"><span class="eyebrow">Last 7 days</span>
@@ -585,11 +676,11 @@ function openLogger(mode) {
       <div class="photo-prev" id="photo-prev" hidden></div>
       <div class="est" id="est"></div>
     </div>
-    <div class="fine">Typed meals are matched to USDA data on your phone. Photos and anything we can’t match use AI. Portions are approximate. Nutrition facts only, not diet advice.</div>`);
+    <div class="fine">Meals are matched to USDA data on your phone. Portions are approximate. Nutrition facts only, not diet advice.</div>`);
   const ta = s.querySelector('#meal-text'), file = s.querySelector('#meal-photo'), plabel = s.querySelector('#photo-label'), prev = s.querySelector('#photo-prev'), est = s.querySelector('#est'), go = s.querySelector('#meal-estimate');
   let photo = null, busy = false, pending = null;
-  const aiOn = !DEMO;
-  if (!aiOn) { plabel.hidden = true; est.innerHTML = '<p class="status">Photo estimates are off in demo mode. Typing works: list foods with amounts, like “2 eggs, 1 cup greek yogurt”.</p>'; }
+  const aiOn = false; // photo + AI estimates retired: typed meals match USDA data on the phone
+  if (!aiOn) { plabel.hidden = true; est.innerHTML = '<p class="status">List foods with amounts, like “2 eggs, 1 cup greek yogurt”.</p>'; }
   if (mode === 'photo' && aiOn) file.click(); else ta.focus();
   file.addEventListener('change', () => { photo = file.files && file.files[0] || null; if (photo) { const u = URL.createObjectURL(photo); prev.hidden = false; prev.innerHTML = `<img src="${u}" alt="Your meal photo"><span>Photo added</span><button class="linkbtn" data-clear="1">Remove</button>`; } });
   function renderEst() {
@@ -682,7 +773,7 @@ function openAccount() {
       <div class="btnrow"><input id="acct-name" class="inp" maxlength="40" value="${esc(profile?.first_name || '')}"><button class="btn" id="acct-save">Save</button></div>
       <button class="btn alt" id="acct-signout">Sign out</button>`}
       <p class="status"><a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p>
-      ${DEMO ? '' : `<div class="danger"><p class="status">Delete your account and all your data. This can’t be undone, and any Circle subscription is cancelled.</p>
+      ${DEMO ? '' : `<div class="danger"><p class="status">Delete your account and all your data. This can’t be undone, and any paid membership is cancelled.</p>
         <button class="btn alt" id="acct-del">Delete my account</button><div id="acct-confirm"></div></div>`}
     </div>`);
   s.addEventListener('click', async e => {
@@ -723,7 +814,7 @@ async function openAdmin() {
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
         <div class="flabel">Members (${d.members.length})</div>
-        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · Circle subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
+        ${d.members.map(m => `<div class="tile adm-mem"><b>${esc(m.first_name || '(no name)')}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.kept + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></div>`).join('')}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
   }
@@ -788,7 +879,7 @@ function desktopScreen() {
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
       <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate or snap a photo. Totals use USDA nutrition data.</p></div>
       <div class="tile desk-feat mint"><b class="hv">Habit coach</b><p>Friendly nudges and simple meal ideas when you need them.</p></div>
-      <div class="tile desk-feat lilac"><b class="hv">The Circle</b><p>A small group that cheers your wins, with live calls.</p></div>
+      <div class="tile desk-feat lilac"><b class="hv">Check-ins</b><p>Pacts, cheers and people on the same path.</p></div>
       <div class="tile desk-steps"><span class="eyebrow">How to get the app</span>
         <ol class="steps"><li>Open the link on your phone.</li><li>Add it to your home screen. The page shows you how on iPhone and Android.</li><li>Open <b>LongevityCo</b> from your home screen and sign up.</li></ol></div>
     </div>
@@ -875,7 +966,7 @@ async function startSession(session) {
   state = Object.assign(blankState(), remote || cached || {});
   state.tab = 'today';
   const params = new URLSearchParams(location.search);
-  if (params.get('circle') === 'joined') { state.tab = 'circle'; toast('Welcome to the Circle!'); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
+  if (params.get('circle') === 'joined') { state.tab = 'circle'; toast(`Welcome to ${NAMES.kept}!`); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
   if (params.has('circle')) history.replaceState(null, '', location.pathname);
   try { const c = await cloud.loadConcierges(user.id, profile.concierge_id); myConcierge = c.mine; selfConcierge = c.self; } catch (e) { console.error(e); }
   if (!profile.first_name || !profile.accepted_at) return onboarding();
@@ -892,4 +983,5 @@ async function boot() {
   const session = await cloud.getSession();
   if (session) startSession(session); else authScreen();
 }
+{ const tc = document.getElementById('tab-circle'); if (tc) tc.lastChild.textContent = NAMES.tab; }
 boot();

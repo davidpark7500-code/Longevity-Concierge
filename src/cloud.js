@@ -76,7 +76,7 @@ export async function getGroup(id) {
   return data;
 }
 export async function listPosts(groupId) {
-  let q = sb.from('posts').select('id, user_id, group_id, author_name, body, win, cheer_count, created_at').order('created_at', { ascending: false }).limit(50);
+  let q = sb.from('posts').select('*').order('created_at', { ascending: false }).limit(50);
   q = groupId ? q.eq('group_id', groupId) : q.is('group_id', null);
   const { data, error } = await q;
   if (error) throw error;
@@ -114,3 +114,23 @@ export async function loadConcierges(uid, conciergeId) {
   const rows = data || [];
   return { mine: rows.find(r => r.id === conciergeId) || null, self: rows.find(r => r.user_id === uid) || null };
 }
+
+// ---------- Pacts ----------
+export async function loadPacts() {
+  const [{ data: pacts, error }, { data: stats }, { data: mine }, { data: checks }] = await Promise.all([
+    sb.from('pacts').select('*').order('sort'),
+    sb.rpc('pact_stats'),
+    sb.from('pact_members').select('pact_id, joined_on'),
+    sb.from('pact_checkins').select('pact_id, day').gte('day', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 10)),
+  ]);
+  if (error) throw error;
+  return {
+    pacts: pacts || [],
+    stats: Object.fromEntries((stats || []).map(r => [r.pact_id, [r.members, r.today]])),
+    mine: Object.fromEntries((mine || []).map(r => [r.pact_id, r.joined_on])),
+    checks: new Set((checks || []).map(r => r.pact_id + '|' + r.day)),
+  };
+}
+export async function joinPact(id, day) { const { error } = await sb.from('pact_members').insert({ pact_id: id, joined_on: day }); if (error && error.code !== '23505') throw error; }
+export async function pactCheckIn(id, day) { const { error } = await sb.from('pact_checkins').insert({ pact_id: id, day }); if (error && error.code !== '23505') throw error; }
+export async function pactUndo(id, day) { const { error } = await sb.from('pact_checkins').delete().eq('pact_id', id).eq('day', day); if (error) throw error; }
