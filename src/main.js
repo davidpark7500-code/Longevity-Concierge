@@ -13,7 +13,7 @@ import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
 import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
-import { CONCIERGE, NAMES, PACKAGES, VALDURA, MEMBERSHIP, monthly, money } from './config.js';
+import { CONCIERGE, NAMES, PACKAGES, VALDURA, MEMBERSHIP, FEATURED, monthly, money } from './config.js';
 // App feel on iOS: Safari ignores user-scalable=no, so block pinch and double-tap zoom here too.
 if (typeof document !== 'undefined') {
   ['gesturestart', 'gesturechange'].forEach(e => document.addEventListener(e, ev => ev.preventDefault(), { passive: false }));
@@ -201,7 +201,7 @@ function today() {
 
 function packageTile() {
   const k = tierKey(), pk = PACKAGES[k];
-  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the ${Object.values(PACKAGES).map(p => p.name).join(', ').replace(/, ([^,]*)$/, ' and $1')} packages →</span></button>`;
+  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the packages. ${esc(PACKAGES[FEATURED.key].name)} is the ${esc(FEATURED.badge.toLowerCase())} →</span></button>`;
   const c = counts();
   const items = pk.daily.map((d, i) => { const on = !!c['pkg' + i]; return `<button class="pchk${on ? ' on' : ''}" data-pkg="${i}" aria-pressed="${on}"><span class="box">${on ? icon('check') : ''}</span>${esc(d)}</button>`; }).join('');
   const done = pk.daily.filter((_, i) => c['pkg' + i]).length;
@@ -342,9 +342,9 @@ async function loadFeed() {
 }
 
 /* ---------------- Plan ---------------- */
+const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
 function plan() {
   const tier = tierKey(), pk = PACKAGES[tier], c = concierge();
-  const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
   const keptLine = profile?.circle_active ? `<p>You’re a ${NAMES.kept} member.</p>${DEMO ? '' : '<button class="btn ghost" data-act="portal">Manage subscription</button>'}`
     : hasCircle() ? `<p>${NAMES.kept} is included with your package.</p>`
     : `<p>Not a ${NAMES.kept} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.kept}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
@@ -360,11 +360,21 @@ function plan() {
     ${current}
     ${conciergeTile()}
     <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'The'}</span><span class="lt">packages</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
-    ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${list(PACKAGES[k].perks)}</div>`).join('')}
+    ${featuredTile(others, tier)}
+    ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${list(PACKAGES[k].perks)}</div>`).join('')}
     <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
   </div>`;
+}
+function featuredTile(others, tier) {
+  const k = FEATURED.key, pk = PACKAGES[k]; if (!pk || !others.includes(k)) return '';
+  const m = monthly(pk), cur = PACKAGES[tier];
+  const diff = cur ? m.total - monthly(cur).total : null;
+  const why = m.off ? `Includes ${money(m.off)} off every month, free shipping, $50 in free product and ${NAMES.kept}.` : `Includes ${NAMES.kept}.`;
+  return `<div class="tile dark plan feat-pkg s4"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, false)}
+    <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${list(pk.perks)}
+    ${contactBtn('btn sun', 'Ask about ' + pk.name)}</div>`;
 }
 function priceBlock(pk, full) {
   const m = monthly(pk);
@@ -980,7 +990,8 @@ async function startSession(session) {
 }
 async function boot() {
   if (DEMO) {
-    profile = { first_name: 'Alex', tier: 'performance', circle_active: false };
+    const dt = new URLSearchParams(location.search).get('tier');
+    profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', circle_active: false };
     const cached = loadCache(); state = Object.assign(blankState(), cached || {});
     if (!cached) { seedDemo(); save(); }
     render(); return;

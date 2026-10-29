@@ -62,6 +62,9 @@ export const PACKAGES = {
   },
 };
 
+// The package to spotlight on the Plan tab. badge: keep it factual ("Most popular" only once it's true).
+export const FEATURED = { key: 'performance', badge: 'Best value' };
+
 // Loyalty membership, built into every package price.
 // Monthly price shown = retail + fee - discount (the discount only applies when the product order is at least minOrder).
 export const MEMBERSHIP = {
