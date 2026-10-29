@@ -349,7 +349,7 @@ function plan() {
     : hasCircle() ? `<p>The Circle is included with your package.</p>`
     : `<p>Not a ${NAMES.paid} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.paidThe}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
   const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
-  const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, true)}
+  const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, true)}${perksBlock(pk)}
       <div class="prods">${pk.products.map(p => `<div class="prod"><b>${esc(p.name)}</b><small>${esc(p.how)}</small></div>`).join('')}</div>
       <div class="ordered"><label for="pkg-ordered">Last order arrived</label><input id="pkg-ordered" type="date" class="inp" value="${esc(state.pkgOrdered || '')}"><small>${state.pkgOrdered ? reorderText() : 'Add the date and we’ll remind you when it’s time to reorder.'}</small></div>
       <div class="circle-status">${keptLine}</div>
@@ -361,7 +361,7 @@ function plan() {
     ${conciergeTile()}
     <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'The'}</span><span class="lt">packages</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
     ${featuredTile(others, tier)}
-    ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${list(PACKAGES[k].perks)}</div>`).join('')}
+    ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${perksBlock(PACKAGES[k])}</div>`).join('')}
     <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
@@ -371,16 +371,18 @@ function featuredTile(others, tier) {
   const k = FEATURED.key, pk = PACKAGES[k]; if (!pk || !others.includes(k)) return '';
   const m = monthly(pk), cur = PACKAGES[tier];
   const diff = cur ? m.total - monthly(cur).total : null;
-  const why = m.off ? `Includes ${money(m.off)} off every month, free shipping, $50 in free product and ${NAMES.paidThe}.` : `Includes ${NAMES.paidThe}.`;
+  const why = m.off ? `The ${money(m.off)} member discount applies, and ${NAMES.paidThe} is included.` : `Includes ${NAMES.paidThe}.`;
   return `<div class="tile dark plan feat-pkg s4"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, false)}
-    <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${list(pk.perks)}
+    <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${perksBlock(pk)}
     ${contactBtn('btn sun', 'Ask about ' + pk.name)}</div>`;
 }
 function priceBlock(pk, full) {
   const m = monthly(pk);
   const math = `${money(m.retail)} products + ${money(m.fee)} membership${m.off ? ` − ${money(m.off)} member discount` : ''}`;
-  return `<div class="pblock"><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="pmath">${math}</span>${full ? `<span class="pmath">${esc(MEMBERSHIP.name)} included: ${MEMBERSHIP.perks.filter(x => m.off || !x.startsWith('$' + MEMBERSHIP.discount + ' off')).map(esc).join(' · ')}</span>` : ''}</div>`;
+  return `<div class="pblock"><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="pmath">${math}</span></div>`;
 }
+const memberPerks = pk => MEMBERSHIP.perks.filter(x => monthly(pk).off || !x.startsWith('$' + MEMBERSHIP.discount + ' off'));
+const perksBlock = pk => `${list(pk.perks)}<div class="mperks"><span class="eyebrow">${esc(MEMBERSHIP.name)} perks</span>${list(memberPerks(pk))}</div>`;
 function reorderText() {
   const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';
   const left = Math.round((new Date(state.pkgOrdered + 'T12:00:00') - new Date()) / 864e5) + pk.reorderDays;

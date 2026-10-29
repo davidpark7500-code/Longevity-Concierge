@@ -502,3 +502,5 @@ body.sheet-open .toast.in{transform:translate(-50%,0)}
 .pblock{display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}.ptot{font-size:40px}.ptot small{font-size:18px;margin-left:2px;font-weight:600}.pmath{font-size:12px;line-height:1.35;opacity:.8}
 .plan:not(.current) .ptot{font-size:32px}
 .feat-pkg{border:3px solid var(--sun)}.feat-pkg .sticker{top:16px;right:16px}.feat-pkg .eyebrow{padding-right:120px}.plan.feat-pkg li{color:var(--on-forest);opacity:.9}.feat-pkg .why{font-size:14px;margin:0}.feat-pkg .btn{align-self:flex-start;margin-top:4px}
+
+.mperks{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}.tile.dark .mperks{border-top-color:rgba(255,255,255,.15)}.mperks .eyebrow{font-size:11px}
