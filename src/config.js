@@ -41,10 +41,10 @@ export const PACKAGES = {
     products: [
       { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
       { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
-      { name: 'XS Creatine + HMB', how: 'Creatine and HMB to pair with your strength training.' },
+      { name: 'XS Creatine + HMB', how: 'Creatine and HMB, plus electrolytes, to pair with your strength training.' },
     ],
-    daily: ['Prebiotic fiber', 'Meal shake', 'Creatine + HMB'],
-    perks: ['Prebiotic Fiber + Meal Powder, plus XS Creatine + HMB', 'The Circle included', 'Circle Live sessions'],
+    daily: ['Prebiotic fiber', 'Meal shake', 'Creatine + HMB with electrolytes'],
+    perks: ['Prebiotic Fiber + Meal Powder, plus XS Creatine + HMB (with electrolytes)', 'The Circle included', 'Circle Live sessions'],
     reorderDays: 30,
   },
   longevity: {
@@ -56,10 +56,10 @@ export const PACKAGES = {
       { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
       { name: 'Double X Multivitamin', how: '22 vitamins and minerals plus 22 plant nutrients.' },
       { name: 'Muscle Multiplier', how: 'A light, sugar-free essential amino acid drink.' },
-      { name: 'XS Creatine', how: 'Creatine to pair with your strength training.' },
+      { name: 'XS Creatine', how: 'Creatine plus electrolytes to pair with your strength training.' },
     ],
-    daily: ['Prebiotic fiber', 'Meal shake', 'Double X multivitamin', 'Muscle Multiplier', 'Creatine'],
-    perks: ['Fiber + Meal Powder, plus Double X, Muscle Multiplier and Creatine', 'The Circle included', 'Monthly 1:1 with your concierge'],
+    daily: ['Prebiotic fiber', 'Meal shake', 'Double X multivitamin', 'Muscle Multiplier', 'Creatine with electrolytes'],
+    perks: ['Fiber + Meal Powder, plus Double X, Muscle Multiplier and Creatine (with electrolytes)', 'The Circle included', 'Monthly 1:1 with your concierge'],
     reorderDays: 30,
   },
 };
