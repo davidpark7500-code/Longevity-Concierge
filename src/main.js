@@ -103,7 +103,7 @@ const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
 const hasCircle = () => !!profile && (profile.circle_active || ['performance', 'longevity'].includes(profile.tier));
 const tierKey = () => (profile && profile.tier) || 'free';
-const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name, contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
+const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
 const contactBtn = (cls = 'btn', text) => { const c = concierge(); return c.contact ? `<a class="${cls}" href="${esc(c.contact)}" ${/^https:/.test(c.contact) ? 'target="_blank" rel="noopener"' : ''}>${esc(text || c.label)}</a>` : ''; };
 
 /* ---------------- Dates, days, streaks ---------------- */
@@ -215,7 +215,8 @@ function reorderLine() {
 }
 function conciergeTile() {
   const c = concierge();
-  return `<div class="tile lilac s4 conc"><span class="face" style="background:var(--butter)">${esc(c.name[0] || 'C')}</span><div><span class="eyebrow">Your concierge</span><b>${esc(c.name)}</b><small>Questions about your package, a reorder, or just stuck? Reach out.</small></div>${contactBtn('btn', c.contact ? 'Message' : '')}</div>`;
+  const generic = c.name === 'your concierge';
+  return `<div class="tile lilac s4 conc"><span class="face" style="background:var(--butter)">${generic ? sun() : esc(c.name[0])}</span><div><span class="eyebrow">Your concierge</span><b>${generic ? 'Here to help' : esc(c.name)}</b><small>Questions about your package, a reorder, or just stuck? Reach out.</small></div>${contactBtn('btn', c.contact ? 'Text' : '')}</div>`;
 }
 
 /* ---------------- Learn ---------------- */

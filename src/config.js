@@ -2,9 +2,9 @@
 
 // Your concierge (shown on Today and Plan). contact: sms:, tel:, mailto: or https:// link.
 export const CONCIERGE = {
-  name: 'David',
-  contact: '',              // e.g. 'sms:+18165551234'. Leave '' to hide the button until you add it.
-  contactLabel: 'Text David',
+  name: '',                          // leave '' to say "your concierge" everywhere
+  contact: 'sms:+18168774200',       // PLACEHOLDER (David's number). Each concierge's own number replaces this.
+  contactLabel: 'Text your concierge',
 };
 
 // Community naming. Change the words here and the whole app follows.
