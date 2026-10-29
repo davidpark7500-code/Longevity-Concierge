@@ -369,7 +369,7 @@ function plan() {
 function priceBlock(pk, full) {
   const m = monthly(pk);
   const math = `${money(m.retail)} products + ${money(m.fee)} membership${m.off ? ` − ${money(m.off)} member discount` : ''}`;
-  return `<div class="pblock"><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="pmath">${math}</span>${full ? `<span class="pmath">${esc(MEMBERSHIP.name)} included: ${MEMBERSHIP.perks.map(esc).join(' · ')}</span>` : ''}</div>`;
+  return `<div class="pblock"><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="pmath">${math}</span>${full ? `<span class="pmath">${esc(MEMBERSHIP.name)} included: ${MEMBERSHIP.perks.filter(x => m.off || !x.startsWith('$' + MEMBERSHIP.discount + ' off')).map(esc).join(' · ')}</span>` : ''}</div>`;
 }
 function reorderText() {
   const pk = PACKAGES[tierKey()]; if (!pk || !state.pkgOrdered) return '';

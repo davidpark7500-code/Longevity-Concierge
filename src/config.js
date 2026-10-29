@@ -68,7 +68,7 @@ export const MEMBERSHIP = {
   name: 'Loyalty membership',
   fee: 20,
   discount: 40,
-  minOrder: 0,          // David confirmed the $40 off applies to every package, including Ease (under $150)
+  minOrder: 150,        // the $40 off only applies to product orders of $150+ (so not Ease)
   perks: ['$40 off your monthly order', 'Free shipping', '$50 in free product', '50% off the Valdura app'],
 };
 export function monthly(pkg) {
