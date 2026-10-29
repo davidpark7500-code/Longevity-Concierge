@@ -16,44 +16,48 @@ export const NAMES = {
   keptLine: 'The members-only group for people who follow through.',
 };
 
-// The three product packages. PRODUCTS ARE PLACEHOLDERS until David sends the real lists.
-// daily: the checklist members see on Today (one tap each). Keep each to a few words.
-// reorderDays: how long one order lasts, for the reorder reminder.
+// The three product packages (keys stay essentials/performance/longevity in the database; names show in the app).
+// daily: the checklist members see on Today (one tap each). price: shown on the Plan tab ('' to hide).
+// Product lines describe what each product is. No health or medication claims here.
 export const PACKAGES = {
   essentials: {
-    name: 'Essentials',
-    tagline: 'The everyday basics.',
+    name: 'Ease',
+    tagline: 'The everyday foundation.',
+    price: '$131.25',
     products: [
-      { name: '[Product 1]', how: 'As directed on the label' },
-      { name: '[Product 2]', how: 'As directed on the label' },
+      { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
+      { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
     ],
-    daily: ['Morning protein shake', 'Daily fiber'],
-    perks: ['Your package checklist in the app', 'Reorder reminders', 'Add Kept any time'],
+    daily: ['Prebiotic fiber', 'Meal shake'],
+    perks: ['Prebiotic Fiber + All-in-One Meal Powder', 'Your package checklist in the app', 'Reorder reminders'],
     reorderDays: 30,
   },
   performance: {
-    name: 'Performance',
-    tagline: 'Basics plus energy and hydration.',
+    name: 'Endure',
+    tagline: 'Foundation plus strength support.',
+    price: '$193.25',
     products: [
-      { name: '[Product 1]', how: 'As directed on the label' },
-      { name: '[Product 2]', how: 'As directed on the label' },
-      { name: '[Product 3]', how: 'As directed on the label' },
+      { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
+      { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
+      { name: 'XS Creatine + HMB', how: 'Creatine and HMB to pair with your strength training.' },
     ],
-    daily: ['Morning protein shake', 'Multivitamin', 'Hydration mix'],
-    perks: ['Kept included', 'Kept Live group calls', 'Members-only pacts'],
+    daily: ['Prebiotic fiber', 'Meal shake', 'Creatine + HMB'],
+    perks: ['Everything in Ease, plus XS Creatine + HMB', 'Kept included', 'Kept Live sessions'],
     reorderDays: 30,
   },
   longevity: {
-    name: 'Longevity',
-    tagline: 'The full program.',
+    name: 'Elevate',
+    tagline: 'The complete program.',
+    price: '$312.25',
     products: [
-      { name: '[Product 1]', how: 'As directed on the label' },
-      { name: '[Product 2]', how: 'As directed on the label' },
-      { name: '[Product 3]', how: 'As directed on the label' },
-      { name: '[Product 4]', how: 'As directed on the label' },
+      { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
+      { name: 'All-in-One Meal Powder', how: 'A drinkable meal: 20 g plant protein and 6 g fiber per shake.' },
+      { name: 'Double X Multivitamin', how: '22 vitamins and minerals plus 22 plant nutrients.' },
+      { name: 'Muscle Multiplier', how: 'A light, sugar-free essential amino acid drink.' },
+      { name: 'XS Creatine', how: 'Creatine to pair with your strength training.' },
     ],
-    daily: ['Morning protein shake', 'Multivitamin', 'Omega-3', 'Protein snack'],
-    perks: ['Kept included', 'Monthly 1:1 with your concierge', 'First access to workshops'],
+    daily: ['Prebiotic fiber', 'Meal shake', 'Double X multivitamin', 'Muscle Multiplier', 'Creatine'],
+    perks: ['Everything in Ease, plus Double X, Muscle Multiplier and Creatine', 'Kept included', 'Monthly 1:1 with your concierge'],
     reorderDays: 30,
   },
 };

@@ -201,7 +201,7 @@ function today() {
 
 function packageTile() {
   const k = tierKey(), pk = PACKAGES[k];
-  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the Essentials, Performance and Longevity packages →</span></button>`;
+  if (!pk) return `<button class="tile paper s4 pkg-cta" data-tabgo="plan"><span class="eyebrow">Packages</span><b class="hv">Make it easier<span class="accent">.</span></b><span>See the ${Object.values(PACKAGES).map(p => p.name).join(', ').replace(/, ([^,]*)$/, ' and $1')} packages →</span></button>`;
   const c = counts();
   const items = pk.daily.map((d, i) => { const on = !!c['pkg' + i]; return `<button class="pchk${on ? ' on' : ''}" data-pkg="${i}" aria-pressed="${on}"><span class="box">${on ? icon('check') : ''}</span>${esc(d)}</button>`; }).join('');
   const done = pk.daily.filter((_, i) => c['pkg' + i]).length;
@@ -255,7 +255,7 @@ function circle() {
       <p>${esc(NAMES.keptLine)}</p>
       <ul><li>${NAMES.kept} Live: members-only Q&amp;A sessions with replays</li><li>Members-only pacts</li><li>A private group for people on the same path</li><li>A ${NAMES.kept} badge on your check-ins</li></ul>
       ${DEMO ? '<p class="status">Payments are off in demo mode.</p>' : `<button class="btn" data-act="checkout" id="join-circle">Become a ${NAMES.kept} member${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}
-      <small>Included with the Performance and Longevity packages.</small></div>`;
+      <small>Included with the ${PACKAGES.performance.name} and ${PACKAGES.longevity.name} packages.</small></div>`;
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="lt">The</span><span class="hv">check-in<span class="accent">.</span></span></h1></div>
     ${keptTile}
@@ -348,7 +348,7 @@ function plan() {
     : hasCircle() ? `<p>${NAMES.kept} is included with your package.</p>`
     : `<p>Not a ${NAMES.kept} member yet.</p>${DEMO ? '' : `<button class="btn sun" data-act="checkout">Join ${NAMES.kept}${PRICE_LABEL ? ' · ' + esc(PRICE_LABEL) : ''}</button>`}`;
   const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
-  const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>
+  const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${pk.price ? `<span class="price">${esc(pk.price)} per order</span>` : ''}
       <div class="prods">${pk.products.map(p => `<div class="prod"><b>${esc(p.name)}</b><small>${esc(p.how)}</small></div>`).join('')}</div>
       <div class="ordered"><label for="pkg-ordered">Last order arrived</label><input id="pkg-ordered" type="date" class="inp" value="${esc(state.pkgOrdered || '')}"><small>${state.pkgOrdered ? reorderText() : 'Add the date and we’ll remind you when it’s time to reorder.'}</small></div>
       <div class="circle-status">${keptLine}</div>
@@ -359,7 +359,7 @@ function plan() {
     ${current}
     ${conciergeTile()}
     <div class="s4 sec"><h2><span class="hv">${pk ? 'Other' : 'The'}</span><span class="lt">packages</span></h2><span class="hand">ask ${esc(c.name)}</span></div>
-    ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${list(PACKAGES[k].perks)}</div>`).join('')}
+    ${others.map(k => `<div class="tile paper plan ${others.length === 3 && k === 'longevity' ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${PACKAGES[k].price ? `<span class="price">${esc(PACKAGES[k].price)}</span>` : ''}${list(PACKAGES[k].perks)}</div>`).join('')}
     <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it')}</div>
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
     <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
