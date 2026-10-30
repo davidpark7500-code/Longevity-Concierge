@@ -13,6 +13,7 @@ import EX_RAW from './data/exercises.json';
 import { prepare, parseMeal } from './shared/foodsearch.js';
 import { CAPS, preFilter, PROVIDER_TEXT } from '../supabase/functions/api/guardrails.js';
 import * as cloud from './cloud.js';
+import { NATIVE, initNative, getReminder, setReminder } from './native.js';
 import { SEED_ARTICLES } from './articles-seed.js';
 import { CONCIERGE, NAMES, PACKAGES, VALDURA, MEMBERSHIP, FEATURED, monthly, money } from './config.js';
 // App feel on iOS: Safari ignores user-scalable=no, so block pinch and double-tap zoom here too.
@@ -203,6 +204,7 @@ function today() {
     <div class="tile butter streak s2">${sun()}<span class="eyebrow">Streak</span><b class="hv">${st}</b><span class="hand">${st === 1 ? 'day' : 'days'} in a row</span></div>
     <div class="tile paper week s2"><span class="eyebrow">This week</span><div class="dots">${week}</div></div>
     ${PACKAGES[tierKey()] ? '' : freeCta()}
+    ${reminderTile()}
     <div class="s4 sec"><h2><span class="hv">Today’s</span><span class="lt">habits</span></h2><span class="hand">tap to log</span></div>
     ${HABITS.map((h, i) => habitTile(h, i === 0)).join('')}
     ${packageTile()}
@@ -214,6 +216,14 @@ function today() {
   </div>`;
 }
 
+const niceTime = t => { const [h, m] = t.split(':').map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+function reminderTile() {
+  if (!NATIVE || getReminder()) return '';
+  try { if (localStorage.getItem('lc-reminder-ask') === 'no') return ''; } catch {}
+  return `<div class="tile mint remind-tile s4"><span class="eyebrow">Stay on track</span><b class="hv">Want a daily nudge?</b>
+    <p>We’ll send one quick reminder each evening to check in on your habits. Change the time anytime in Account.</p>
+    <div class="btnrow"><button class="btn" type="button" id="rem-yes">Remind me at 7:30 PM</button><button class="linkbtn" type="button" id="rem-no">Not now</button></div></div>`;
+}
 function freeCta() {
   const f = PACKAGES[FEATURED.key], m = monthly(f);
   return `<button class="tile dark plan feat-pkg pkg-cta s4" data-tabgo="plan" id="free-cta"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">Make it easier</span><b class="hv">${esc(f.name)}</b><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="why">${m.off ? money(m.off) + ' off every month, free shipping, a free product and ' + NAMES.paidThe + ' included.' : NAMES.paidThe + ' included.'}</span><span class="btn sun">See the packages →</span></button>`;
@@ -526,6 +536,8 @@ document.addEventListener('click', async e => {
   if (e.target.closest('#post-send')) return sendPost();
   if (e.target.closest('#open-coach')) return openCoach();
   if (e.target.closest('#open-account')) return openAccount();
+  if (e.target.closest('#rem-yes')) { setReminder('19:30').then(on => { toast(on ? 'Reminder set for 7:30 PM' : 'Turn on notifications for this app in your phone’s Settings.'); render(); }).catch(() => {}); return; }
+  if (e.target.closest('#rem-no')) { try { localStorage.setItem('lc-reminder-ask', 'no'); } catch {} render(); return; }
   const act = e.target.closest('[data-act]');
   if (act) { const a = act.dataset.act; if (a === 'checkout' || a === 'portal') return goStripe(a, act); if (a === 'admin') return openAdmin(); }
   const f = e.target.closest('[data-finder]'); if (f) return openFinder(f.dataset.finder);
@@ -820,6 +832,9 @@ function openAccount() {
       <div class="tile"><span class="eyebrow">Signed in as</span><b>${esc(user?.email || '')}</b></div>
       <label class="eyebrow" for="acct-name">First name</label>
       <div class="btnrow"><input id="acct-name" class="inp" maxlength="40" value="${esc(profile?.first_name || '')}"><button class="btn" id="acct-save">Save</button></div>
+      ${NATIVE ? `<div class="tile acct-remind"><span class="eyebrow">Daily reminder</span>
+        <div class="btnrow"><input id="rem-time" class="inp" type="time" value="${esc(getReminder() || '19:30')}"><button class="btn" id="rem-save">${getReminder() ? 'Update' : 'Turn on'}</button></div>
+        ${getReminder() ? '<button class="linkbtn" id="rem-off" type="button">Turn off the reminder</button>' : '<p class="status">A gentle nudge each day to check in on your habits.</p>'}</div>` : ''}
       <button class="btn alt" id="acct-signout">Sign out</button>`}
       <p class="status"><a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p>
       ${DEMO ? '' : `<div class="danger"><p class="status">Delete your account and all your data. This can’t be undone, and any paid membership is cancelled.</p>
@@ -828,6 +843,8 @@ function openAccount() {
   s.addEventListener('click', async e => {
     if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     if (e.target.closest('#acct-save')) { const v = s.querySelector('#acct-name').value.trim().slice(0, 40); if (!v) return; try { await cloud.saveProfile(user.id, { first_name: v }); profile.first_name = v; toast('Saved'); render(); } catch { toast('Couldn’t save. Try again.'); } return; }
+    if (e.target.closest('#rem-save')) { const t = s.querySelector('#rem-time').value || '19:30'; const on = await setReminder(t).catch(() => false); toast(on ? 'Reminder set for ' + niceTime(t) : 'Turn on notifications for this app in your phone’s Settings.'); s.close(); render(); return; }
+    if (e.target.closest('#rem-off')) { await setReminder(''); toast('Reminder off'); s.close(); render(); return; }
     if (e.target.closest('#acct-signout')) { await cloud.flushSave(); await cloud.signOut(); location.reload(); return; }
     if (e.target.closest('#acct-del')) { s.querySelector('#acct-confirm').innerHTML = '<p class="status">Type DELETE to confirm.</p><div class="btnrow"><input id="del-word" class="inp" autocomplete="off"><button class="btn" id="del-go">Delete forever</button></div>'; return; }
     if (e.target.closest('#del-go')) { if (s.querySelector('#del-word').value.trim() !== 'DELETE') { toast('Type DELETE to confirm.'); return; }
@@ -886,11 +903,11 @@ let installEvt = null;
 if (typeof window !== 'undefined') window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; document.querySelectorAll('[data-native-install]').forEach(b => b.hidden = false); });
 function platform() {
   const ua = navigator.userAgent || '';
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const standalone = NATIVE || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const android = /Android/.test(ua);
   const inApp = /Instagram|FBAN|FBAV|FB_IAB|TikTok|Snapchat|Line\/|LinkedInApp|Twitter/i.test(ua);
-  return { standalone, ios, android, inApp, mobile: ios || android };
+  return { standalone, ios, android, inApp, mobile: NATIVE || ios || android };
 }
 const SHARE_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 function installTile(p) {
@@ -1158,6 +1175,12 @@ async function startSession(session) {
 }
 function maybeExplainer() { if (state.seenExplainer || DEMO) return; state.seenExplainer = true; save(); setTimeout(() => playVideo('explainer'), 400); }
 async function boot() {
+  initNative({ onBack: () => {
+    const v = document.querySelector('.vidov'); if (v) { v.querySelector('.vclose')?.click(); return true; }
+    const sh = [...document.querySelectorAll('.sheet')].pop(); if (sh) { sh.close(); return true; }
+    const t = document.getElementById('tab-today'); if (t && !tabsEl.hidden && !t.classList.contains('on')) { t.click(); return true; }
+    return false;
+  } }).catch(() => {});
   if (DEMO) {
     const dt = new URLSearchParams(location.search).get('tier');
     profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', circle_active: false, is_admin: new URLSearchParams(location.search).has('admin') };

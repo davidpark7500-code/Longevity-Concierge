@@ -568,3 +568,8 @@ button.tile.lesson{font:inherit;text-align:left;cursor:pointer;width:100%}
 .adm-pkg{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--muted)}
 .adm-flag p{line-height:1.45}
 .adm-del{align-self:flex-start;color:#c0392b;font-size:13px;margin-top:2px}.adm-note{color:var(--muted);font-size:12px}
+
+/* Native app: daily reminder */
+.remind-tile{display:flex;flex-direction:column;gap:8px}.remind-tile .hv{font-size:30px}.remind-tile p{margin:0}
+.remind-tile .btnrow{align-items:center;gap:14px}
+.acct-remind{display:flex;flex-direction:column;gap:10px}

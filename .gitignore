@@ -4,3 +4,9 @@ dist
 .env.local
 .vercel
 .DS_Store
+# Capacitor build outputs
+android/app/build/
+android/.gradle/
+android/build/
+ios/App/build/
+ios/DerivedData/

@@ -1,5 +1,6 @@
 // Everything that talks to Supabase or our server functions lives here.
 import { createClient } from '@supabase/supabase-js';
+import { NATIVE, SITE } from './native.js';
 
 // Public project settings. These are safe in the code: the anon key only allows what the
 // database security rules allow. Override with VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY if needed.
@@ -14,7 +15,7 @@ export const sb = DEMO ? null : createClient(SB_URL, SB_KEY, { auth: { persistSe
 export async function getSession() { return DEMO ? null : (await sb.auth.getSession()).data.session; }
 export function onAuth(cb) { if (!DEMO) sb.auth.onAuthStateChange((event, session) => cb(event, session)); }
 export async function sendLink(email, ref = '') {
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin, data: ref ? { ref } : undefined } });
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: NATIVE ? SITE : location.origin, data: ref ? { ref } : undefined } });
   if (error) throw error;
 }
 export async function verifyCode(email, token) {

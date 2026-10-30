@@ -1,0 +1,12 @@
+{
+  "appId": "app.longevityconcierge",
+  "appName": "Longevity Concierge",
+  "webDir": "dist",
+  "backgroundColor": "#eef1ea",
+  "ios": { "contentInset": "never", "backgroundColor": "#eef1ea" },
+  "android": { "backgroundColor": "#eef1ea" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 900, "launchAutoHide": true, "backgroundColor": "#0f3b33", "showSpinner": false },
+    "LocalNotifications": { "smallIcon": "ic_stat_icon", "iconColor": "#ff6a3d" }
+  }
+}
