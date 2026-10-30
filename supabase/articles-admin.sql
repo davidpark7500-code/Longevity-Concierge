@@ -53,3 +53,17 @@ update public.groups set next_call = 'Weekly' where next_call is null or next_ca
 -- Admins: David and Luis.
 update public.profiles set is_admin = true
 where id in (select id from auth.users where email in ('davidpark7500@gmail.com','luisramirez3416@gmail.com'));
+
+-- One private Circle group for every package member (applied 2026-10-29).
+create or replace function public.assign_group() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare g uuid;
+begin
+  if new.group_id is null and (new.circle_active or new.tier in ('essentials','performance','longevity')) then
+    select id into g from groups order by created_at limit 1;
+    if g is null then insert into groups (name, next_call) values ('The Circle', 'Weekly') returning id into g; end if;
+    new.group_id := g;
+  end if;
+  return new;
+end $$;
+revoke execute on function public.assign_group() from public, anon, authenticated;
