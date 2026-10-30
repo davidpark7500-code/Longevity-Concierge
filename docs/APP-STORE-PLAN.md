@@ -23,6 +23,9 @@ The website, flyers, one-pagers, PDFs, videos and other promo material stay exac
 - Privacy policy and terms name Holistic Creative Studios LLC and cover the phone apps. Account deletion page: /delete-account.html (for Google Play).
 - Reviewer sign-in: review@holisticcreativestudios.com. Typing that email skips the code email and the code box takes a password instead. David creates the user in Supabase (Authentication > Users > Add user, auto-confirm) with a password he picks, and puts it in the review notes.
 
+- App-only content hidden when NATIVE: 30% peptides and 50% Valdura perks, Valdura add-on tile, NAD+/peptide/GLP-1 articles in Learn, "Is my dose right?" chip (now "Quick dinner ideas"), peptide and Valdura words in the Plan disclaimer. Website unchanged.
+- Android release workflow (.github/workflows/android-release.yml): manual, builds a signed .aab. Still needs the 4 signing secrets added in GitHub (GitHub blocks setting them from Claude's sandbox): generate the upload key on submission day, David pastes the values in Settings > Secrets and variables > Actions. Enroll in Play App Signing so a lost upload key can be reset.
+
 ## Store setup
 - Apple: company enrollment needs the LLC's legal name (Apple does not accept DBAs) + D-U-N-S. $99/year.
 - Google Play: organization account, $25 one-time (organization accounts skip the 12-tester / 14-day closed test).

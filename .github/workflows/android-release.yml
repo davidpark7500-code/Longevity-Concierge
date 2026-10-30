@@ -1,0 +1,42 @@
+name: Android release build (Google Play)
+# Run by hand from the Actions tab. Produces a signed .aab to upload in Play Console.
+# Needs repo secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: 'Version shown in the store (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Check signing secrets
+        env: { KS: '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' }
+        run: test -n "$KS" || { echo "::error::Signing secrets are missing. Add them under Settings > Secrets and variables > Actions."; exit 1; }
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Build signed app bundle
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | base64 -d > "$ANDROID_KEYSTORE_FILE"
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon -PversionCode=$((100 + ${{ github.run_number }})) -PversionName='${{ inputs.versionName }}'
+          rm -f "$ANDROID_KEYSTORE_FILE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LongevityConcierge-play-${{ inputs.versionName }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30

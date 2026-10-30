@@ -106,7 +106,11 @@ const icon = (k, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidd
 const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
 // In the store apps the Circle isn't gated by packages: members get the weekly call and private group outside the app.
-if (NATIVE) for (const p of Object.values(PACKAGES)) p.perks = (p.perks || []).filter(x => !/Circle/.test(x));
+if (NATIVE) {
+  for (const p of Object.values(PACKAGES)) p.perks = (p.perks || []).filter(x => !/Circle/.test(x));
+  MEMBERSHIP.perks = MEMBERSHIP.perks.filter(x => !/peptide|Valdura/i.test(x.t)); // store apps: no prescription or lab-app perks
+}
+const STORE_HIDDEN = a => NATIVE && /\bNAD\+|peptide|GLP-1|semaglutide|tirzepatide/i.test(a.title || ''); // articles kept on the website only
 const hasCircle = () => !!profile && (profile.is_admin || (!NATIVE && ['essentials', 'performance', 'longevity'].includes(profile.tier)));
 const tierKey = () => (profile && profile.tier) || 'free';
 const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
@@ -254,7 +258,7 @@ function conciergeTile() {
 function learn() {
   const cats = ['All', 'Protein', 'Strength', 'Nutrition', 'Mindset', 'Provider'];
   if (!articles) loadArticles();
-  const all = (articles || SEED_ARTICLES).filter(l => l.published || isAdmin());
+  const all = (articles || SEED_ARTICLES).filter(l => (l.published || isAdmin()) && !STORE_HIDDEN(l));
   const list = all.filter(l => state.cat === 'All' || l.cat === state.cat);
   const [f, ...rest] = list;
   const tiles = rest.map((l, i) => { const wide = rest.length % 2 === 1 && i === rest.length - 1;
@@ -401,9 +405,9 @@ function plan() {
     ${featuredTile(others, tier)}
     ${others.filter(k => k !== FEATURED.key).map((k, i, arr) => `<div class="tile paper plan ${arr.length === 1 ? 's4' : 's2'}"><span class="eyebrow">${esc(PACKAGES[k].tagline)}</span><b class="hv">${esc(PACKAGES[k].name)}</b>${priceBlock(PACKAGES[k], false)}${perksBlock(PACKAGES[k])}${contactBtn('btn', 'Ask about ' + PACKAGES[k].name, msg(`I’d like the ${PACKAGES[k].name} package.`), k)}</div>`).join('')}
     ${pk ? '' : `<div class="tile paper free-line s4"><span class="eyebrow">You’re on Free</span>${profile?.requested_tier && PACKAGES[profile.requested_tier] ? `<p class="req-note">You asked about ${esc(PACKAGES[profile.requested_tier].name)}. ${esc(c.name[0].toUpperCase() + c.name.slice(1))} will set it up and it’ll show here.</p>` : ''}<p>${TIERS.free.items.map(esc).join(' · ')}</p><div class="circle-status">${keptLine}</div></div>` + conciergeTile()}
-    <div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it', msg('I’d like to know more about adding Valdura for my bloodwork.'))}</div>
+    ${NATIVE ? '' : `<div class="tile peach provider s4"><span class="eyebrow">Add-on</span><b class="hv">${esc(VALDURA.title)}</b><p>${esc(VALDURA.body)}</p>${contactBtn('btn', 'Ask ' + c.name + ' about it', msg('I’d like to know more about adding Valdura for my bloodwork.'))}</div>`}
     ${profile?.is_admin || selfConcierge ? `<button class="tile mint finder-tile s4" data-act="admin" id="open-admin"><span class="eyebrow">${profile?.is_admin ? 'Admin' : 'Your team'}</span><span class="ft-q hv">Members &amp; groups</span></button>` : ''}
-    <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication, peptide, or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease. Valdura is a separate service with its own terms.</p>
+    <p class="disclaim s4">Longevity Concierge provides general wellness education and coordination. We do not diagnose, treat, prescribe, or recommend any medication${NATIVE ? '' : ', peptide,'} or dosage. Supplements are not intended to diagnose, treat, cure, or prevent any disease.${NATIVE ? '' : ' Valdura is a separate service with its own terms.'}</p>
   </div>`;
 }
 function featuredTile(others, tier) {
@@ -799,7 +803,7 @@ function coachContext() {
 function openCoach() {
   const s = sheet(`<header><span class="hv">Your coach</span><button class="x" aria-label="Close">×</button></header>
     <div class="msgs" id="msgs"><div class="msg bot">Hi ${esc(firstName())}. I can help with meal ideas, habits, and staying on track. What’s on your mind?</div></div>
-    <div class="suggest">${['High-protein breakfast?', 'Feeling unmotivated', 'Is my dose right?', 'Easy fiber ideas'].map(x => `<button class="chip" data-q="${x}">${x}</button>`).join('')}</div>
+    <div class="suggest">${['High-protein breakfast?', 'Feeling unmotivated', NATIVE ? 'Quick dinner ideas' : 'Is my dose right?', 'Easy fiber ideas'].map(x => `<button class="chip" data-q="${x}">${x}</button>`).join('')}</div>
     <form class="ask" id="ask"><input id="coach-input" placeholder="Ask about habits or meals" autocomplete="off" maxlength="1000"><button type="submit">Send</button></form>
     <div class="fine">AI coach for habits and general wellness. Medical questions go to your provider.</div>`, 'panel');
   const msgs = s.querySelector('#msgs'), inp = s.querySelector('#coach-input');
