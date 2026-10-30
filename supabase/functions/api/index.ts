@@ -263,6 +263,7 @@ async function signupAlert(_req: Request) {
     <p><b>${fresh.length === 1 ? 'New sign-up' : fresh.length + ' new sign-ups'} on Longevity Concierge</b></p>
     <ul>${rows.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
     <p>Total members: ${count ?? '?'}</p>
+    ${(count ?? 0) >= 100 ? '<p style="background:#fff3d2;padding:10px 12px;border-radius:8px"><b>Heads up:</b> you are past 100 members. Check your Resend usage (Settings → Usage). The free plan sends 100 emails a day, including sign-in codes. Upgrade to Pro if busy days get close.</p>' : ''}
     <p><a href="${env('APP_URL', 'https://www.longevityconcierge.app')}">Open the app</a> &rarr; Plan &rarr; Members &amp; groups to set them up.</p></div>`;
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
     body: JSON.stringify({ from: 'Longevity Concierge <hello@longevityconcierge.app>', to, subject: `New sign-up: ${names}`, html }) });
