@@ -22,8 +22,8 @@ export const NAMES = {
 // Product lines describe what each product is. No health or medication claims here.
 export const PACKAGES = {
   essentials: {
-    name: 'Ease',
-    tagline: 'The everyday foundation.',
+    name: 'Foundation',
+    tagline: 'Your everyday basics.',
     retail: 158.25,
     products: [
       { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },
@@ -35,7 +35,7 @@ export const PACKAGES = {
     reorderDays: 30,
   },
   performance: {
-    name: 'Endure',
+    name: 'Strength',
     tagline: 'Foundation plus strength support.',
     retail: 193.25,
     products: [
@@ -48,8 +48,8 @@ export const PACKAGES = {
     reorderDays: 30,
   },
   longevity: {
-    name: 'Elevate',
-    tagline: 'The complete program.',
+    name: 'Complete',
+    tagline: 'Everything, plus daily nutrients.',
     retail: 312.25,
     products: [
       { name: 'Prebiotic Fiber', how: 'Soluble fiber to help you reach your daily fiber goal.' },

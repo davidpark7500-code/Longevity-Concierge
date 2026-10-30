@@ -193,6 +193,7 @@ h1.mix .hv{font-size:84px}
 /* plan */
 .plan{display:flex;flex-direction:column;gap:10px}
 .plan .hv{font-size:40px}
+.plan.s2 .hv{font-size:34px;overflow-wrap:anywhere}
 .plan.current .hv{font-size:62px}
 .plan.current .sticker{top:14px;right:14px}
 .plan ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}

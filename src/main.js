@@ -320,7 +320,7 @@ function pactProgress(p) {
 function renderPacts() {
   const el = document.getElementById('pacts'); if (!el || !pactData) return;
   if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.challenges.toLowerCase()} yet.</p>`; return; }
-  const teaser = hasCircle() ? '' : `<div class="tile pact dark locked"><div class="pact-top"><span class="hico">${icon('lock')}</span><span class="pill-k">Package members</span></div><b>Circle: 30-day reset</b><small>All five daily habits, every day, with the Circle.</small><small class="pstat">Unlocks with Ease, Endure or Elevate</small><button class="btn sun" data-tabgo="plan">See packages</button></div>`;
+  const teaser = hasCircle() ? '' : `<div class="tile pact dark locked"><div class="pact-top"><span class="hico">${icon('lock')}</span><span class="pill-k">Package members</span></div><b>Circle: 30-day reset</b><small>All five daily habits, every day, with the Circle.</small><small class="pstat">Unlocks with Foundation, Strength or Complete</small><button class="btn sun" data-tabgo="plan">See packages</button></div>`;
   el.innerHTML = pactData.pacts.map(p => {
     const pr = pactProgress(p), st = pactData.stats[p.id] || [0, 0];
     const action = !pr ? `<button class="btn" data-pact="${esc(p.id)}" data-do="join">Join</button>`
