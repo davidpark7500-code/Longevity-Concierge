@@ -986,9 +986,14 @@ function codeScreen(email, msg = '') {
   document.getElementById('auth-code').focus();
   document.getElementById('auth-back').onclick = () => authScreen();
   document.getElementById('code-form').addEventListener('submit', async e => {
-    e.preventDefault(); const code = document.getElementById('auth-code').value.trim(); const clean = code.replace(/\D/g, ''); if (clean.length < 6) return;
+    e.preventDefault(); const form = e.currentTarget; if (form.dataset.busy) return;
+    const code = document.getElementById('auth-code').value.trim(); const clean = code.replace(/\D/g, ''); if (clean.length < 6) return;
+    form.dataset.busy = '1'; const btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Signing in…';
     try { const session = await cloud.verifyCode(email, clean); if (session) startSession(session); }
-    catch { codeScreen(email, 'That code didn’t work. Check the newest email, or request a new one.'); }
+    catch {
+      if (await cloud.getSession().catch(() => null)) return; // already signed in (e.g. the email link was tapped)
+      if (document.getElementById('code-form')) codeScreen(email, 'That code didn’t work. Check the newest email, or request a new one.');
+    }
   });
 }
 function onboarding() {
