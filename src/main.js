@@ -967,7 +967,7 @@ function authScreen(msg = '') {
   requestAnimationFrame(paintAll);
   document.getElementById('watch-promo').onclick = () => playVideo('promo');
   let seenPromo = false; try { seenPromo = localStorage.getItem('lc-promo-seen') === '1'; } catch { /* storage blocked */ }
-  if (!seenPromo && !msg && !quietMode()) { try { localStorage.setItem('lc-promo-seen', '1'); } catch { /* storage blocked */ } playVideo('promo'); }
+  if (!seenPromo && !msg && !quietMode() && platform().mobile) { try { localStorage.setItem('lc-promo-seen', '1'); } catch { /* storage blocked */ } playVideo('promo'); }
   const skip = document.getElementById('skip-install');
   if (skip) skip.onclick = () => { try { sessionStorage.setItem('lc-skip-install', '1'); } catch { /* storage blocked */ } document.querySelector('.install-tile').remove(); document.getElementById('auth-form').hidden = false; };
   const nat = document.querySelector('[data-native-install]');
@@ -1115,7 +1115,8 @@ function playVideo(key, onDone) {
   el.innerHTML = `<video playsinline muted autoplay preload="auto" poster="${v.poster}" src="${v.src}"></video>
     <button class="vsound" type="button" aria-pressed="false">${icon('sound')}<span>Tap for sound</span></button>
     <div class="vbar"><i></i></div>
-    <button class="btn sun vgo" type="button">${esc(v.cta)}</button>`;
+    <button class="btn sun vgo" type="button">${esc(v.cta)}</button>
+    <button class="vclose" type="button" aria-label="Close video">×</button>`;
   document.body.appendChild(el);
   const vid = el.querySelector('video'), snd = el.querySelector('.vsound'), bar = el.querySelector('.vbar i');
   let done = false;
@@ -1125,6 +1126,10 @@ function playVideo(key, onDone) {
   vid.addEventListener('ended', close);
   vid.addEventListener('click', () => snd.click());
   el.querySelector('.vgo').onclick = close;
+  el.querySelector('.vclose').onclick = close;
+  el.addEventListener('click', e => { if (e.target === el) close(); }); // click outside the video (computers)
+  const esc_ = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc_); } };
+  document.addEventListener('keydown', esc_);
   vid.play().catch(() => {});
 }
 const quietMode = () => matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
