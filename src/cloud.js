@@ -14,11 +14,17 @@ export const sb = DEMO ? null : createClient(SB_URL, SB_KEY, { auth: { persistSe
 // ---------- Auth ----------
 export async function getSession() { return DEMO ? null : (await sb.auth.getSession()).data.session; }
 export function onAuth(cb) { if (!DEMO) sb.auth.onAuthStateChange((event, session) => cb(event, session)); }
+// App Store / Google Play reviewers sign in with this address and a password (set in Supabase Auth),
+// typed into the code box. No email is sent for it.
+export const REVIEW_EMAIL = 'review@holisticcreativestudios.com';
+export const isReview = email => String(email).trim().toLowerCase() === REVIEW_EMAIL;
 export async function sendLink(email, ref = '') {
+  if (isReview(email)) return;
   const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: NATIVE ? SITE : location.origin, data: ref ? { ref } : undefined } });
   if (error) throw error;
 }
 export async function verifyCode(email, token) {
+  if (isReview(email)) { const { data, error } = await sb.auth.signInWithPassword({ email, password: token }); if (error) throw error; return data.session; }
   const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
   if (error) throw error;
   return data.session;
@@ -102,6 +108,18 @@ export async function deletePost(id) {
   const { error } = await sb.from('posts').delete().eq('id', id);
   if (error) throw error;
 }
+
+// Report a post (emails the admins) and block people (their posts disappear for you).
+export async function reportPost(postId, reason = '') { return api('/api/report', { postId, reason }); }
+export async function blockUser(uid, name) {
+  const { error } = await sb.from('blocks').insert({ blocked: uid, blocked_name: name || null });
+  if (error && error.code !== '23505') throw error;
+}
+export async function listBlocked() {
+  const { data, error } = await sb.from('blocks').select('blocked, blocked_name').order('created_at', { ascending: false });
+  if (error) throw error; return data || [];
+}
+export async function unblockUser(uid) { const { error } = await sb.from('blocks').delete().eq('blocked', uid); if (error) throw error; }
 
 // ---------- Concierge teams ----------
 export async function conciergeName(slug) {

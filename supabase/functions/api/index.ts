@@ -1,10 +1,9 @@
-// Supabase Edge Function "api": AI coach, meal estimates, Circle checkout/portal, admin, account deletion.
-// Routes: POST /api/coach, POST /api/estimate, POST /api/checkout, POST /api/portal,
-//         GET|POST /api/admin, POST /api/delete-account
+// Supabase Edge Function "api": AI coach, meal estimates, admin, community reports, account deletion.
+// Routes: POST /api/coach, POST /api/estimate, GET|POST /api/admin, POST /api/report,
+//         POST /api/delete-account, POST /api/signup-alert
 // Secrets: ANTHROPIC_API_KEY (required), ANTHROPIC_MODEL, APP_TIMEZONE, AI_GLOBAL_DAILY_CAP, APP_URL,
-//          STRIPE_SECRET_KEY, STRIPE_PRICE_CIRCLE, RESEND_API_KEY (new sign-up alerts). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
+//          RESEND_API_KEY (sign-up and report alerts). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import Stripe from 'npm:stripe@16.12.0';
 import { CAPS, COACH_RULES, PROVIDER_TEXT, checkPrompt, estimatePrompt, preFilter } from './guardrails.js';
 
 const env = (k: string, d = '') => Deno.env.get(k) ?? d;
@@ -71,7 +70,7 @@ async function coach(req: Request) {
   const last = history[history.length - 1];
   if (!last || last.role !== 'user') return fail('Send a message first.');
   const pre = preFilter(last.content); if (pre) return json({ kind: pre.kind, text: pre.text });
-  const paid = profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier);
+  const paid = ['essentials', 'performance', 'longevity'].includes(profile.tier);
   const dayCap = paid ? CAPS.coachDay : CAPS.coachDayFree;
   const cap = await bumpUsage(user.id, 'coach', dayCap); if (cap) return json({ kind: 'limit', text: cap });
 
@@ -120,36 +119,6 @@ async function estimate(req: Request) {
   return json({ items, note: String(r.note || '').slice(0, 240) });
 }
 
-function stripe() {
-  if (!env('STRIPE_SECRET_KEY')) throw fail('Payments aren’t set up yet.', 503);
-  return new Stripe(env('STRIPE_SECRET_KEY'), { httpClient: Stripe.createFetchHttpClient() });
-}
-const appUrl = (req: Request) => env('APP_URL') || req.headers.get('origin') || 'https://longevityconcierge.vercel.app';
-async function checkout(req: Request) {
-  const { user, profile } = await requireUser(req);
-  if (!env('STRIPE_PRICE_CIRCLE')) return fail('Payments aren’t set up yet.', 503);
-  const s = stripe();
-  let customer = profile.stripe_customer_id;
-  if (!customer) {
-    customer = (await s.customers.create({ email: user.email, metadata: { user_id: user.id } })).id;
-    await db.from('profiles').update({ stripe_customer_id: customer }).eq('id', user.id);
-  }
-  const base = appUrl(req);
-  const session = await s.checkout.sessions.create({
-    mode: 'subscription', customer, client_reference_id: user.id,
-    line_items: [{ price: env('STRIPE_PRICE_CIRCLE'), quantity: 1 }],
-    subscription_data: { metadata: { user_id: user.id } },
-    success_url: `${base}/?circle=joined`, cancel_url: `${base}/?circle=cancelled`, allow_promotion_codes: true,
-  });
-  return json({ url: session.url });
-}
-async function portal(req: Request) {
-  const { profile } = await requireUser(req);
-  if (!profile.stripe_customer_id) return fail('No subscription found.', 404);
-  const s = await stripe().billingPortal.sessions.create({ customer: profile.stripe_customer_id, return_url: `${appUrl(req)}/` });
-  return json({ url: s.url });
-}
-
 // Admin: David (is_admin) sees every team; a concierge sees only their own team.
 async function adminRoute(req: Request) {
   const { user, profile } = await requireUser(req);
@@ -174,12 +143,15 @@ async function adminRoute(req: Request) {
     let fq = db.from('flags').select('*').eq('reviewed', false).order('created_at', { ascending: false }).limit(100);
     const { data: flagRows } = await fq;
     const flags = (flagRows || []).filter((f: any) => all || ids.has(f.user_id));
+    await db.from('reports').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString()); // keep report copies 90 days at most
+    const { data: repRows } = await db.from('reports').select('*').eq('resolved', false).order('created_at', { ascending: false }).limit(100);
+    const reports = (repRows || []).filter((r: any) => all || ids.has(r.author_id));
     const emails = Object.fromEntries((usersRes.data?.users || []).map((u: any) => [u.id, u.email]));
     const counts: Record<string, number> = {}; (profiles || []).forEach((p: any) => { counts[p.concierge_id] = (counts[p.concierge_id] || 0) + 1; });
     return json({
       scope: all ? 'all' : 'team', teams: teamsOn, self: self || null,
       concierges: (concierges || []).map((c: any) => ({ ...c, members: counts[c.id] || 0, login_email: c.user_id ? emails[c.user_id] || '' : '' })),
-      members: (profiles || []).map((p: any) => ({ ...p, email: emails[p.id] || '' })), groups: groups || [], flags,
+      members: (profiles || []).map((p: any) => ({ ...p, email: emails[p.id] || '' })), groups: groups || [], flags, reports,
     });
   }
   const b = await req.json().catch(() => ({}));
@@ -201,6 +173,12 @@ async function adminRoute(req: Request) {
     const { data: f } = await db.from('flags').select('user_id').eq('id', b.id).single();
     if (!f || !(await inTeam(f.user_id))) return fail('Not on your team.', 403);
     await db.from('flags').update({ reviewed: true }).eq('id', b.id);
+  } else if (b.action === 'removePost' || b.action === 'dismissReport') {
+    const { data: r } = await db.from('reports').select('post_id, author_id').eq('id', b.id).single();
+    if (!r || !(await inTeam(r.author_id))) return fail('Not on your team.', 403);
+    if (b.action === 'removePost' && r.post_id) await db.from('posts').delete().eq('id', r.post_id);
+    const q = db.from('reports').update({ resolved: true });
+    await (b.action === 'removePost' && r.post_id ? q.eq('post_id', r.post_id) : q.eq('id', b.id));
   } else if (b.action === 'setGroupCall') {
     if (!(await groupInTeam(b.id))) return fail('Not on your team.', 403);
     const link = String(b.callLink || '').trim().slice(0, 300);
@@ -230,13 +208,39 @@ async function adminRoute(req: Request) {
   return json({ ok: true });
 }
 
-async function deleteAccount(req: Request) {
-  const { user, profile } = await requireUser(req);
-  if (profile.stripe_customer_id && env('STRIPE_SECRET_KEY')) {
-    try { const s = stripe(); const subs = await s.subscriptions.list({ customer: profile.stripe_customer_id, status: 'active' }); for (const x of subs.data) await s.subscriptions.cancel(x.id); }
-    catch (e) { console.error('cancel subs', e); }
+// A member reports a post. Saved for admins and emailed to them right away (Apple asks for action within 24 hours).
+async function report(req: Request) {
+  const { user } = await requireUser(req);
+  const b = await req.json().catch(() => ({}));
+  const { data: post } = await db.from('posts').select('id, user_id, author_name, body').eq('id', String(b.postId || '')).maybeSingle();
+  if (!post) return fail('That post is gone already.', 404);
+  if (post.user_id === user.id) return fail('That’s your own post. You can delete it instead.');
+  const reason = String(b.reason || '').trim().slice(0, 300);
+  const { data: dup } = await db.from('reports').select('id').eq('post_id', post.id).eq('reporter', user.id).maybeSingle();
+  if (!dup) {
+    await db.from('reports').insert({ post_id: post.id, reporter: user.id, author_id: post.user_id, author_name: post.author_name, post_body: String(post.body).slice(0, 1000), reason });
+    const key = env('RESEND_API_KEY');
+    if (key) {
+      const { data: admins } = await db.from('profiles').select('id').eq('is_admin', true);
+      const to: string[] = [];
+      for (const a of admins || []) { const { data } = await db.auth.admin.getUserById(a.id); if (data?.user?.email) to.push(data.user.email); }
+      const e = (t: string) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+      const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#0e2620"><p><b>A post was reported on Longevity Concierge</b></p>
+        <p><b>${e(post.author_name || 'Member')}</b> wrote:</p><blockquote style="border-left:3px solid #ccc;margin:0;padding:4px 12px">${e(post.body)}</blockquote>
+        ${reason ? `<p><b>Reason:</b> ${e(reason)}</p>` : ''}
+        <p>Please review it within 24 hours: <a href="${env('APP_URL', 'https://www.longevityconcierge.app')}">open the app</a> &rarr; Plan &rarr; Members &amp; groups &rarr; Reported posts.</p></div>`;
+      await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ from: 'Longevity Concierge <hello@longevityconcierge.app>', to, subject: 'Reported post: please review', html }) })
+        .then(r => { if (!r.ok) console.error('report alert', r.status); }).catch(e => console.error('report alert', e));
+    }
   }
-  await db.auth.admin.deleteUser(user.id);
+  return json({ ok: true });
+}
+
+async function deleteAccount(req: Request) {
+  const { user } = await requireUser(req);
+  const { error } = await db.auth.admin.deleteUser(user.id);
+  if (error) { console.error('delete account', error); return fail('Couldn’t delete your account. Try again or email hello@longevityconcierge.app.', 500); }
   return json({ ok: true });
 }
 
@@ -275,7 +279,7 @@ async function signupAlert(_req: Request) {
   return json({ ok: true, sent: fresh.length });
 }
 
-const ROUTES: Record<string, (r: Request) => Promise<Response>> = { coach, estimate, checkout, portal, admin: adminRoute, 'delete-account': deleteAccount, 'signup-alert': signupAlert };
+const ROUTES: Record<string, (r: Request) => Promise<Response>> = { coach, estimate, report, admin: adminRoute, 'delete-account': deleteAccount, 'signup-alert': signupAlert };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });

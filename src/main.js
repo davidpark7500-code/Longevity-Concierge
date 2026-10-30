@@ -105,7 +105,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const icon = (k, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
 const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
-const hasCircle = () => !!profile && (profile.is_admin || profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier));
+// In the store apps the Circle isn't gated by packages: members get the weekly call and private group outside the app.
+if (NATIVE) for (const p of Object.values(PACKAGES)) p.perks = (p.perks || []).filter(x => !/Circle/.test(x));
+const hasCircle = () => !!profile && (profile.is_admin || (!NATIVE && ['essentials', 'performance', 'longevity'].includes(profile.tier)));
 const tierKey = () => (profile && profile.tier) || 'free';
 const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
 const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -226,7 +228,7 @@ function reminderTile() {
 }
 function freeCta() {
   const f = PACKAGES[FEATURED.key], m = monthly(f);
-  return `<button class="tile dark plan feat-pkg pkg-cta s4" data-tabgo="plan" id="free-cta"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">Make it easier</span><b class="hv">${esc(f.name)}</b><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="why">${m.off ? money(m.off) + ' off every month, free shipping, a free product and ' + NAMES.paidThe + ' included.' : NAMES.paidThe + ' included.'}</span><span class="btn sun">See the packages →</span></button>`;
+  return `<button class="tile dark plan feat-pkg pkg-cta s4" data-tabgo="plan" id="free-cta"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">Make it easier</span><b class="hv">${esc(f.name)}</b><span class="ptot hv">${money(m.total)}<small>/mo</small></span><span class="why">${NATIVE ? (m.off ? money(m.off) + ' off every month, free shipping and a free product.' : '') : m.off ? money(m.off) + ' off every month, free shipping, a free product and ' + NAMES.paidThe + ' included.' : NAMES.paidThe + ' included.'}</span><span class="btn sun">See the packages →</span></button>`;
 }
 function packageTile() {
   const k = tierKey(), pk = PACKAGES[k];
@@ -290,12 +292,13 @@ function circle() {
       <ul><li>${NAMES.paid} Live: weekly members-only Q&amp;A calls</li><li>Members-only challenges</li><li>A private group, separate from the main feed</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
       <button class="btn" data-tabgo="plan" id="join-circle">Pick a package to join</button>
       <small>Included with every package: ${Object.values(PACKAGES).map(p => esc(p.name)).join(', ')}.</small></div>`;
+  const circleTile = NATIVE && !access ? '' : keptTile;
   return top() + `<div class="bento">
     <div class="s4 title"><h1 class="mix"><span class="hv">Check-in<span class="accent">.</span></span></h1></div>
-    ${keptTile}
+    ${circleTile}
     <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2>${isAdmin() && !DEMO ? `<button class="linkbtn" data-pact-new="1">+ New challenge</button>` : `<span class="hand">join one, check in daily</span>`}</div>
     <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
-    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}${NAMES.paidThe[0].toUpperCase() + NAMES.paidThe.slice(1)} (private)</button></div>
+    <div class="s4 seg small" role="group" aria-label="Feed" ${NATIVE && !access ? 'hidden' : ''}><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}${NAMES.paidThe[0].toUpperCase() + NAMES.paidThe.slice(1)} (private)</button></div>
     <div class="tile s4 composer"><label class="eyebrow" for="post-body">Check in</label>
       <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared only with ${NAMES.paidThe} members`}"></textarea>
       <div class="btnrow"><select id="post-win" aria-label="Win tag">${WINS.map(w => `<option value="${esc(w)}">${w || 'No tag'}</option>`).join('')}</select><button class="btn" id="post-send">Check in</button></div></div>
@@ -318,6 +321,7 @@ async function loadPacts() {
     if (DEMO) { const d = state.demoPacts || (state.demoPacts = { mine: { dp1: dayKeyOf(new Date(Date.now() - 6 * 864e5)) }, checks: [] });
       pactData = { pacts: DEMO_PACTS.filter(p => !p.members_only || hasCircle()), stats: { dp1: [84, 31], dp2: [57, 22], dp3: [39, 0], dp4: [18, 9] }, mine: d.mine, checks: new Set(d.checks) }; }
     else pactData = await cloud.loadPacts();
+    if (!hasCircle()) pactData.pacts = pactData.pacts.filter(p => !p.members_only);
     renderPacts();
   } catch (e) { console.error(e); el.innerHTML = `<p class="status">${NAMES.challenges} are coming soon.</p>`; }
 }
@@ -330,7 +334,7 @@ function pactProgress(p) {
 function renderPacts() {
   const el = document.getElementById('pacts'); if (!el || !pactData) return;
   if (!pactData.pacts.length) { el.innerHTML = `<p class="status">No ${NAMES.challenges.toLowerCase()} yet.</p>`; return; }
-  const teaser = hasCircle() ? '' : `<div class="tile pact dark locked"><div class="pact-top"><span class="hico">${icon('lock')}</span><span class="pill-k">Package members</span></div><b>Circle: 30-day reset</b><small>All five daily habits, every day, with the Circle.</small><small class="pstat">Unlocks with Foundation, Strength or Complete</small><button class="btn sun" data-tabgo="plan">See packages</button></div>`;
+  const teaser = hasCircle() || NATIVE ? '' : `<div class="tile pact dark locked"><div class="pact-top"><span class="hico">${icon('lock')}</span><span class="pill-k">Package members</span></div><b>Circle: 30-day reset</b><small>All five daily habits, every day, with the Circle.</small><small class="pstat">Unlocks with Foundation, Strength or Complete</small><button class="btn sun" data-tabgo="plan">See packages</button></div>`;
   el.innerHTML = pactData.pacts.map(p => {
     const pr = pactProgress(p), st = pactData.stats[p.id] || [0, 0];
     const action = !pr ? `<button class="btn" data-pact="${esc(p.id)}" data-do="join">Join</button>`
@@ -360,7 +364,7 @@ async function pactAction(id, what) {
 function postTile(p) {
   const mine = user && p.user_id === user.id;
   return `<article class="tile post s4"><header><span class="face" style="background:${faceColor(p.author_name)}">${esc((p.author_name || 'M')[0])}</span><div><b>${esc(p.author_name || 'Member')}${p.author_kept ? ` <span class="pill-k sm">${NAMES.paid}</span>` : ''}</b><small>${ago(p.created_at)} ago</small></div>${p.win ? `<span class="win">${esc(p.win)}</span>` : ''}</header>
-  <p>${esc(p.body)}</p><div class="acts"><button class="cheer ${p.cheered ? 'on' : ''}" data-cheer="${esc(p.id)}">Cheer · ${p.cheer_count}</button>${mine || profile?.is_admin ? `<button class="cheer" data-delpost="${esc(p.id)}">Delete</button>` : ''}</div></article>`;
+  <p>${esc(p.body)}</p><div class="acts"><button class="cheer ${p.cheered ? 'on' : ''}" data-cheer="${esc(p.id)}">Cheer · ${p.cheer_count}</button>${mine || profile?.is_admin ? `<button class="cheer" data-delpost="${esc(p.id)}">Delete</button>` : ''}${mine ? '' : `<button class="linkbtn mod" data-report="${esc(p.id)}">Report</button><button class="linkbtn mod" data-block="${esc(p.id)}">Block</button>`}</div></article>`;
 }
 let feedPosts = [];
 async function loadFeed() {
@@ -381,7 +385,7 @@ async function loadFeed() {
 const list = items => `<ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
 function plan() {
   const tier = tierKey(), pk = PACKAGES[tier], c = concierge();
-  const keptLine = hasCircle() ? `<p>The Circle is included with your package.</p>`
+  const keptLine = NATIVE ? '' : hasCircle() ? `<p>The Circle is included with your package.</p>`
     : `<p>${NAMES.paidThe[0].toUpperCase() + NAMES.paidThe.slice(1)} comes with every package.</p>`;
   const others = ['essentials', 'performance', 'longevity'].filter(k => k !== tier);
   const current = pk ? `<div class="tile dark plan current s4"><span class="eyebrow">Your package · ${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, true)}${perksBlock(pk)}
@@ -406,7 +410,7 @@ function featuredTile(others, tier) {
   const k = FEATURED.key, pk = PACKAGES[k]; if (!pk || !others.includes(k)) return '';
   const m = monthly(pk), cur = PACKAGES[tier];
   const diff = cur ? m.total - monthly(cur).total : null;
-  const why = m.off ? `The ${money(m.off)} member discount applies, and ${NAMES.paidThe} is included.` : `Includes ${NAMES.paidThe}.`;
+  const why = NATIVE ? (m.off ? `The ${money(m.off)} member discount applies.` : '') : m.off ? `The ${money(m.off)} member discount applies, and ${NAMES.paidThe} is included.` : `Includes ${NAMES.paidThe}.`;
   return `<div class="tile dark plan feat-pkg s4"><span class="sticker">${esc(FEATURED.badge)}</span><span class="eyebrow">${esc(pk.tagline)}</span><b class="hv">${esc(pk.name)}</b>${priceBlock(pk, false)}
     <p class="why">${why}${diff !== null && diff > 0 ? ` Just ${money(diff)} more a month than ${esc(cur.name)}.` : ''}</p>${perksBlock(pk)}
     ${contactBtn('btn sun', 'Ask about ' + pk.name, msg(`I’d like the ${pk.name} package.`), FEATURED.key)}</div>`;
@@ -533,13 +537,15 @@ document.addEventListener('click', async e => {
   const fd = e.target.closest('[data-feed]'); if (fd && !fd.disabled) { state.feed = fd.dataset.feed; save(); render(); return; }
   const ch = e.target.closest('[data-cheer]'); if (ch) return toggleCheer(ch.dataset.cheer);
   const dp = e.target.closest('[data-delpost]'); if (dp) { if (DEMO) return; try { await cloud.deletePost(dp.dataset.delpost); toast('Post deleted'); loadFeed(); } catch { toast('Couldn’t delete that post.'); } return; }
+  const rp = e.target.closest('[data-report]'); if (rp) { if (!confirmTap(rp)) return; if (DEMO) { toast('Reported. Thanks for letting us know.'); return; } rp.disabled = true; try { await cloud.reportPost(rp.dataset.report); toast('Reported. Our team will review it within 24 hours.'); } catch (err) { toast(err.message); rp.disabled = false; } return; }
+  const bk = e.target.closest('[data-block]'); if (bk) { if (!confirmTap(bk)) return; const p = feedPosts.find(x => String(x.id) === bk.dataset.block); if (!p) return; if (DEMO) { feedPosts = feedPosts.filter(x => x.author_name !== p.author_name); const el = document.getElementById('feed'); if (el) el.innerHTML = feedPosts.map(postTile).join(''); toast('Blocked'); return; } try { await cloud.blockUser(p.user_id, p.author_name); toast(`Blocked. You won’t see ${p.author_name || 'their'} posts. Undo in Account.`); loadFeed(); } catch { toast('Couldn’t block. Try again.'); } return; }
   if (e.target.closest('#post-send')) return sendPost();
   if (e.target.closest('#open-coach')) return openCoach();
   if (e.target.closest('#open-account')) return openAccount();
   if (e.target.closest('#rem-yes')) { setReminder('19:30').then(on => { toast(on ? 'Reminder set for 7:30 PM' : 'Turn on notifications for this app in your phone’s Settings.'); render(); }).catch(() => {}); return; }
   if (e.target.closest('#rem-no')) { try { localStorage.setItem('lc-reminder-ask', 'no'); } catch {} render(); return; }
   const act = e.target.closest('[data-act]');
-  if (act) { const a = act.dataset.act; if (a === 'checkout' || a === 'portal') return goStripe(a, act); if (a === 'admin') return openAdmin(); }
+  if (act && act.dataset.act === 'admin') return openAdmin();
   const f = e.target.closest('[data-finder]'); if (f) return openFinder(f.dataset.finder);
   const mv = e.target.closest('[data-move]'); if (mv) return openMoves(Number(mv.dataset.move));
   if (e.target.closest('[data-moves]')) return openMoves(null);
@@ -561,11 +567,6 @@ async function sendPost() {
   try { await cloud.createPost({ body, win, groupId: state.feed === 'group' ? profile.group_id : null }); ta.value = ''; toast('Posted!'); loadFeed(); }
   catch (err) { console.error(err); toast('Couldn’t post that. Try again.'); }
   finally { btn.disabled = false; }
-}
-async function goStripe(kind, btn) {
-  btn.disabled = true;
-  try { const { url } = await cloud.api(kind === 'checkout' ? '/api/checkout' : '/api/portal'); location.href = url; }
-  catch (err) { toast(err.message); btn.disabled = false; }
 }
 
 /* ---------------- Moves ---------------- */
@@ -835,13 +836,19 @@ function openAccount() {
       ${NATIVE ? `<div class="tile acct-remind"><span class="eyebrow">Daily reminder</span>
         <div class="btnrow"><input id="rem-time" class="inp" type="time" value="${esc(getReminder() || '19:30')}"><button class="btn" id="rem-save">${getReminder() ? 'Update' : 'Turn on'}</button></div>
         ${getReminder() ? '<button class="linkbtn" id="rem-off" type="button">Turn off the reminder</button>' : '<p class="status">A gentle nudge each day to check in on your habits.</p>'}</div>` : ''}
+      <div class="tile acct-blocked"><span class="eyebrow">Blocked people</span><div id="blocked-list"><p class="status">Loading…</p></div></div>
       <button class="btn alt" id="acct-signout">Sign out</button>`}
       <p class="status"><a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p>
-      ${DEMO ? '' : `<div class="danger"><p class="status">Delete your account and all your data. This can’t be undone, and any paid membership is cancelled.</p>
+      ${DEMO ? '' : `<div class="danger"><p class="status">Delete your account and all your data. This can’t be undone. Product orders with your concierge aren’t affected.</p>
         <button class="btn alt" id="acct-del">Delete my account</button><div id="acct-confirm"></div></div>`}
     </div>`);
+  const showBlocked = async () => { const el = s.querySelector('#blocked-list'); if (!el) return;
+    try { const rows = await cloud.listBlocked(); el.innerHTML = rows.length ? rows.map(r => `<div class="btnrow blk"><span>${esc(r.blocked_name || 'Member')}</span><button class="linkbtn" data-unblock="${esc(r.blocked)}">Unblock</button></div>`).join('') : '<p class="status">You haven’t blocked anyone.</p>'; }
+    catch { el.innerHTML = '<p class="status">Couldn’t load this list.</p>'; } };
+  if (!DEMO) showBlocked();
   s.addEventListener('click', async e => {
     if (e.target === s || e.target.closest('.x')) { s.close(); return; }
+    const ub = e.target.closest('[data-unblock]'); if (ub) { try { await cloud.unblockUser(ub.dataset.unblock); toast('Unblocked'); showBlocked(); if (state.tab === 'circle') loadFeed(); } catch { toast('Couldn’t unblock. Try again.'); } return; }
     if (e.target.closest('#acct-save')) { const v = s.querySelector('#acct-name').value.trim().slice(0, 40); if (!v) return; try { await cloud.saveProfile(user.id, { first_name: v }); profile.first_name = v; toast('Saved'); render(); } catch { toast('Couldn’t save. Try again.'); } return; }
     if (e.target.closest('#rem-save')) { const t = s.querySelector('#rem-time').value || '19:30'; const on = await setReminder(t).catch(() => false); toast(on ? 'Reminder set for ' + niceTime(t) : 'Turn on notifications for this app in your phone’s Settings.'); s.close(); render(); return; }
     if (e.target.closest('#rem-off')) { await setReminder(''); toast('Reminder off'); s.close(); render(); return; }
@@ -875,12 +882,14 @@ async function openAdmin() {
           <input class="inp" id="me-url" value="${esc(d.self.contact_url || '')}" placeholder="sms:+15555551234, mailto:…, or https://…" autocapitalize="none">
           <input class="inp" id="me-label" maxlength="40" value="${esc(d.self.contact_label || '')}" placeholder="Button text, e.g. Text Sarah">
           <button class="btn alt" id="me-save">Save</button></div>` : ''}
+        <div class="flabel">Reported posts (${(d.reports || []).length})</div>
+        ${(d.reports || []).length ? d.reports.map(r => `<div class="tile adm-flag"><small>${new Date(r.created_at).toLocaleString()}${r.post_id ? '' : ' · post already deleted'}</small><p><b>${esc(r.author_name || 'Member')} wrote:</b> ${esc(r.post_body)}</p>${r.reason ? `<p><b>Reason:</b> ${esc(r.reason)}</p>` : ''}<div class="btnrow">${r.post_id ? `<button class="btn" data-rep-remove="${r.id}">Remove post</button>` : ''}<button class="btn alt" data-rep-ok="${r.id}">Keep it</button></div></div>`).join('') : '<p class="status">No reported posts.</p>'}
         <div class="flabel">Flagged coach replies (${d.flags.length})</div>
         ${d.flags.length ? d.flags.map(f => `<div class="tile adm-flag"><small>${new Date(f.created_at).toLocaleString()}</small><p><b>Asked:</b> ${esc(f.question)}</p><p><b>Blocked reply:</b> ${esc(f.reply)}</p><p><b>Why:</b> ${esc(f.reason)}</p><button class="btn alt" data-review="${f.id}">Mark reviewed</button></div>`).join('') : '<p class="status">Nothing to review.</p>'}
         <div class="flabel">Groups</div>
         ${d.groups.map(g => `<div class="tile adm-group"><b>${esc(g.name)}</b><input class="inp" data-gcall="${g.id}" value="${esc(g.next_call || '')}" placeholder="Next call (e.g. Thursday 7 pm)"><input class="inp" data-glink="${g.id}" value="${esc(g.call_link || '')}" placeholder="Call link (Zoom, etc.)"><button class="btn alt" data-gsave="${g.id}">Save</button></div>`).join('')}
         ${(() => { const w = d.members.filter(waiting), rest = d.members.filter(x => !waiting(x));
-          const row = m => `<div class="tile adm-mem ${waiting(m) ? 'waiting' : ''}"><b>${esc(m.first_name || '(no name)')}${waiting(m) ? ` <span class="pill-k sm">Requested ${esc(PACKAGES[m.requested_tier].name)}${m.requested_at ? ' · ' + ago(m.requested_at) + ' ago' : ''}</span>` : ''}</b><small>${esc(m.email)}${m.circle_active ? ' · ' + NAMES.paid + ' subscriber' : ''} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
+          const row = m => `<div class="tile adm-mem ${waiting(m) ? 'waiting' : ''}"><b>${esc(m.first_name || '(no name)')}${waiting(m) ? ` <span class="pill-k sm">Requested ${esc(PACKAGES[m.requested_tier].name)}${m.requested_at ? ' · ' + ago(m.requested_at) + ' ago' : ''}</span>` : ''}</b><small>${esc(m.email)} · group: ${esc(gname(m.group_id))}${d.scope === 'all' && d.teams !== false ? ' · team: ' + esc(cname(m.concierge_id)) : ''}</small>
           <label class="adm-pkg">Package <select data-tier="${m.id}" aria-label="Package for ${esc(m.first_name || m.email)}">${Object.keys(TIERS).map(k => `<option value="${k}" ${m.tier === k ? 'selected' : ''}>${TIERS[k].name}</option>`).join('')}</select></label>${m.is_admin ? '<small class="adm-note">Admin</small>' : `<button class="linkbtn danger adm-del" data-del-member="${m.id}">Remove member</button>`}</div>`;
           return (w.length ? `<div class="flabel">Waiting on a package (${w.length}) · set their package below</div>${w.map(row).join('')}` : '') + `<div class="flabel">Members (${rest.length})</div>${rest.map(row).join('')}`; })()}`;
     } catch (err) { box.innerHTML = `<p class="status">${esc(err.message)}</p>`; }
@@ -888,6 +897,8 @@ async function openAdmin() {
   s.addEventListener('click', async e => {
     if (e.target === s || e.target.closest('.x')) { s.close(); return; }
     const dm = e.target.closest('[data-del-member]'); if (dm) { if (!confirmTap(dm)) return; dm.disabled = true; await cloud.api('/api/admin', { action: 'deleteMember', id: dm.dataset.delMember }).then(() => toast('Member removed')).catch(err => toast(err.message)); load(); return; }
+    const rr = e.target.closest('[data-rep-remove]'); if (rr) { if (!confirmTap(rr)) return; await cloud.api('/api/admin', { action: 'removePost', id: Number(rr.dataset.repRemove) }).then(() => toast('Post removed')).catch(err => toast(err.message)); load(); return; }
+    const rk = e.target.closest('[data-rep-ok]'); if (rk) { await cloud.api('/api/admin', { action: 'dismissReport', id: Number(rk.dataset.repOk) }).catch(err => toast(err.message)); load(); return; }
     const r = e.target.closest('[data-review]'); if (r) { await cloud.api('/api/admin', { action: 'reviewFlag', id: Number(r.dataset.review) }).catch(err => toast(err.message)); load(); return; }
     if (e.target.closest('#cn-add')) { const v = id => s.querySelector(id).value.trim(); await cloud.api('/api/admin', { action: 'addConcierge', name: v('#cn-name'), slug: v('#cn-slug').toLowerCase(), email: v('#cn-email').toLowerCase(), contactUrl: v('#cn-url') }).then(() => { toast('Concierge added'); load(); }).catch(err => toast(err.message)); return; }
     if (e.target.closest('#me-save')) { await cloud.api('/api/admin', { action: 'setContact', contactUrl: s.querySelector('#me-url').value.trim(), contactLabel: s.querySelector('#me-label').value.trim() }).then(() => toast('Saved')).catch(err => toast(err.message)); return; }
@@ -1004,14 +1015,14 @@ function codeScreen(email, msg = '') {
   const f = document.querySelector('.auth-form') || app;
   f.outerHTML = `<form class="tile auth-form" id="code-form"><span class="eyebrow">Check your email</span>
     <p>We sent a sign-in link and a code to <b>${esc(email)}</b>. ${platform().standalone ? 'Type the code here. The link would open your browser instead of the app.' : 'Tap the link, or type the code here.'}</p>
-    <input id="auth-code" class="inp code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••••">
+    ${cloud.isReview(email) ? '<input id="auth-code" class="inp" type="password" autocomplete="current-password" maxlength="72" placeholder="Review password">' : '<input id="auth-code" class="inp code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••••">'}
     <button class="btn sun" type="submit">Sign in</button>
     <button class="linkbtn" type="button" id="auth-back">Use a different email</button>${msg ? `<p class="status err">${esc(msg)}</p>` : ''}</form>`;
   document.getElementById('auth-code').focus();
   document.getElementById('auth-back').onclick = () => authScreen();
   document.getElementById('code-form').addEventListener('submit', async e => {
     e.preventDefault(); const form = e.currentTarget; if (form.dataset.busy) return;
-    const code = document.getElementById('auth-code').value.trim(); const clean = code.replace(/\D/g, ''); if (clean.length < 6) return;
+    const code = document.getElementById('auth-code').value.trim(); const clean = cloud.isReview(email) ? code : code.replace(/\D/g, ''); if (clean.length < 6) return;
     form.dataset.busy = '1'; const btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Signing in…';
     try { const session = await cloud.verifyCode(email, clean); if (session) startSession(session); }
     catch {
@@ -1167,7 +1178,6 @@ async function startSession(session) {
   state = Object.assign(blankState(), remote || cached || {});
   state.tab = 'today';
   const params = new URLSearchParams(location.search);
-  if (params.get('circle') === 'joined') { state.tab = 'circle'; toast(`Welcome to ${NAMES.paidThe}!`); setTimeout(async () => { profile = await cloud.loadProfile(user.id).catch(() => profile); render(); }, 2500); }
   if (params.has('circle')) history.replaceState(null, '', location.pathname);
   try { const c = await cloud.loadConcierges(user.id, profile.concierge_id); myConcierge = c.mine; selfConcierge = c.self; } catch (e) { console.error(e); }
   if (!profile.first_name || !profile.accepted_at) return onboarding();
@@ -1183,7 +1193,7 @@ async function boot() {
   } }).catch(() => {});
   if (DEMO) {
     const dt = new URLSearchParams(location.search).get('tier');
-    profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', circle_active: false, is_admin: new URLSearchParams(location.search).has('admin') };
+    profile = { first_name: 'Alex', tier: ['free', 'essentials', 'performance', 'longevity'].includes(dt) ? dt : 'performance', is_admin: new URLSearchParams(location.search).has('admin') };
     const cached = loadCache(); state = Object.assign(blankState(), cached || {});
     if (!cached) { seedDemo(); save(); }
     render(); return;

@@ -16,8 +16,12 @@ The website, flyers, one-pagers, PDFs, videos and other promo material stay exac
 - Articles: protein while losing weight, 10 questions for your provider visit, and the rest.
 - Disclaimers, coach safety rules (not user-visible), packages, the Circle, concierge, Terms/Privacy (open from the website).
 
-## Add (app and website)
-- Community safety (Apple guideline 1.2 for user posts): Report a post, Block a user, admin Remove post, reported posts listed in admin.
+## Done (Oct 30, 2026)
+- Community safety (Apple 1.2): Report and Block on every post, blocked list with Unblock in Account, Reported posts in Admin with Remove post / Keep it, email alert to admins on each report. Terms say zero tolerance.
+- The Circle in the store apps: no package gating. No locked tiles, no Circle Live links, no members-only challenges or private group in the app. Members get the weekly call and group outside the app. The website is unchanged.
+- Stripe checkout/portal code removed (app and server).
+- Privacy policy and terms name Holistic Creative Studios LLC and cover the phone apps. Account deletion page: /delete-account.html (for Google Play).
+- Reviewer sign-in: review@holisticcreativestudios.com. Typing that email skips the code email and the code box takes a password instead. David creates the user in Supabase (Authentication > Users > Add user, auto-confirm) with a password he picks, and puts it in the review notes.
 
 ## Store setup
 - Apple: company enrollment needs the LLC's legal name (Apple does not accept DBAs) + D-U-N-S. $99/year.
