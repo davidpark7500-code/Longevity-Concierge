@@ -1097,8 +1097,8 @@ function editPact(p = {}) {
 
 /* ---------------- Video overlays (promo before sign-up, explainer after first login) ---------------- */
 const VIDEOS = {
-  promo: { src: '/media/promo.mp4', poster: '/media/promo.jpg', cta: 'Get started →', label: 'Quick tour' },
-  explainer: { src: '/media/explainer.mp4?v=3', poster: '/media/explainer.jpg', cta: 'Let’s go →', label: 'How it works' },
+  promo: { src: '/media/promo.mp4?v=2', poster: '/media/promo.jpg', cta: 'Get started →', label: 'Quick tour' },
+  explainer: { src: '/media/explainer.mp4?v=4', poster: '/media/explainer.jpg', cta: 'Let’s go →', label: 'How it works' },
 };
 function playVideo(key, onDone) {
   const v = VIDEOS[key]; document.querySelector('.vidov')?.remove();
