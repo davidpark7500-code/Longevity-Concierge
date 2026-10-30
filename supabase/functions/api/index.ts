@@ -2,7 +2,7 @@
 // Routes: POST /api/coach, POST /api/estimate, POST /api/checkout, POST /api/portal,
 //         GET|POST /api/admin, POST /api/delete-account
 // Secrets: ANTHROPIC_API_KEY (required), ANTHROPIC_MODEL, APP_TIMEZONE, AI_GLOBAL_DAILY_CAP, APP_URL,
-//          STRIPE_SECRET_KEY, STRIPE_PRICE_CIRCLE. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
+//          STRIPE_SECRET_KEY, STRIPE_PRICE_CIRCLE, RESEND_API_KEY (new sign-up alerts). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import Stripe from 'npm:stripe@16.12.0';
 import { CAPS, COACH_RULES, PROVIDER_TEXT, checkPrompt, estimatePrompt, preFilter } from './guardrails.js';
@@ -240,7 +240,41 @@ async function deleteAccount(req: Request) {
   return json({ ok: true });
 }
 
-const ROUTES: Record<string, (r: Request) => Promise<Response>> = { coach, estimate, checkout, portal, admin: adminRoute, 'delete-account': deleteAccount };
+
+// New sign-up alerts. Called by a database trigger when someone finishes onboarding.
+// Needs no login: it only emails admins about sign-ups that haven't been announced yet.
+async function signupAlert(_req: Request) {
+  const key = env('RESEND_API_KEY');
+  if (!key) { console.warn('signup alert: RESEND_API_KEY not set'); return json({ ok: false, reason: 'not configured' }); }
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const { data: fresh, error } = await db.from('profiles').update({ signup_notified_at: new Date().toISOString() })
+    .is('signup_notified_at', null).not('accepted_at', 'is', null).gte('created_at', since).select('id, first_name, created_at');
+  if (error) { console.error('signup alert claim', error); return fail('claim failed', 500); }
+  if (!fresh?.length) return json({ ok: true, sent: 0 });
+  const { data: admins } = await db.from('profiles').select('id').eq('is_admin', true);
+  const to: string[] = [];
+  for (const a of admins || []) { const { data } = await db.auth.admin.getUserById(a.id); if (data?.user?.email) to.push(data.user.email); }
+  const { count } = await db.from('profiles').select('id', { count: 'exact', head: true }).not('accepted_at', 'is', null);
+  const esc = (t: string) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const rows: string[] = [];
+  for (const p of fresh) { const { data } = await db.auth.admin.getUserById(p.id); rows.push(`${p.first_name || 'New member'} (${data?.user?.email || 'no email'})`); }
+  const names = fresh.map(p => p.first_name || 'Someone').join(', ');
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#0e2620">
+    <p><b>${fresh.length === 1 ? 'New sign-up' : fresh.length + ' new sign-ups'} on Longevity Concierge</b></p>
+    <ul>${rows.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+    <p>Total members: ${count ?? '?'}</p>
+    <p><a href="${env('APP_URL', 'https://www.longevityconcierge.app')}">Open the app</a> &rarr; Plan &rarr; Members &amp; groups to set them up.</p></div>`;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ from: 'Longevity Concierge <hello@longevityconcierge.app>', to, subject: `New sign-up: ${names}`, html }) });
+  if (!r.ok) {
+    console.error('signup alert send', r.status, await r.text());
+    await db.from('profiles').update({ signup_notified_at: null }).in('id', fresh.map(p => p.id)); // retry with the next one
+    return fail('send failed', 502);
+  }
+  return json({ ok: true, sent: fresh.length });
+}
+
+const ROUTES: Record<string, (r: Request) => Promise<Response>> = { coach, estimate, checkout, portal, admin: adminRoute, 'delete-account': deleteAccount, 'signup-alert': signupAlert };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
