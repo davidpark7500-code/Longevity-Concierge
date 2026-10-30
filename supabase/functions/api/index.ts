@@ -82,10 +82,14 @@ async function coach(req: Request) {
   if (!reply) return json({ kind: 'provider', text: PROVIDER_TEXT });
 
   let ok = false, reason = 'review unavailable';
-  try {
-    const c = parseJson(await claude('You are a strict safety reviewer. Reply with JSON only.', [{ role: 'user', content: checkPrompt(last.content, reply) }], 80));
-    ok = c?.ok === true; reason = c?.reason || reason;
-  } catch (e) { if (!(e instanceof Response)) console.error(e); }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await claude('You are a strict safety reviewer. Reply with only one line of JSON, nothing else.', [{ role: 'user', content: checkPrompt(last.content, reply) }], 250);
+      const c = parseJson(raw);
+      if (c && typeof c.ok === 'boolean') { ok = c.ok; reason = c.reason || (ok ? '' : 'flagged'); break; }
+      console.error('review unparsable', raw.slice(0, 200));
+    } catch (e) { if (!(e instanceof Response)) console.error(e); }
+  }
   if (!ok) {
     await db.from('flags').insert({ user_id: user.id, question: last.content.slice(0, 300), reply: reply.slice(0, 600), reason: String(reason).slice(0, 140) });
     return json({ kind: 'provider', text: PROVIDER_TEXT });

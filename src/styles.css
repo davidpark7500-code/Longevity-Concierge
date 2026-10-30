@@ -540,3 +540,6 @@ button.tile.lesson{font:inherit;text-align:left;cursor:pointer;width:100%}
 .adm-form textarea.tall{min-height:260px;font:15px/1.5 var(--body)}.adm-form .check{display:flex;gap:8px;align-items:center;font-weight:500}
 .btn.danger{color:#c0392b}
 .pact-edit{margin-left:auto;font-size:12px}.pact.ended{opacity:.6}
+.mvbody > *{flex-shrink:0}
+.adm-pkg{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--muted)}
+.adm-flag p{line-height:1.45}
