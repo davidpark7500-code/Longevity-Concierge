@@ -543,3 +543,4 @@ button.tile.lesson{font:inherit;text-align:left;cursor:pointer;width:100%}
 .mvbody > *{flex-shrink:0}
 .adm-pkg{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--muted)}
 .adm-flag p{line-height:1.45}
+.adm-del{align-self:flex-start;color:#c0392b;font-size:13px;margin-top:2px}.adm-note{color:var(--muted);font-size:12px}

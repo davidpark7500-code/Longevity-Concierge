@@ -186,6 +186,14 @@ async function adminRoute(req: Request) {
   if (b.action === 'setTier' && ['free', 'essentials', 'performance', 'longevity'].includes(b.tier)) {
     if (!(await inTeam(b.id))) return fail('Not on your team.', 403);
     await db.from('profiles').update({ tier: b.tier }).eq('id', b.id);
+  } else if (b.action === 'deleteMember') {
+    if (!all) return fail('Only admins can remove members.', 403);
+    if (b.id === user.id) return fail('You can\u2019t remove your own account here.');
+    const { data: target } = await db.from('profiles').select('is_admin').eq('id', b.id).single();
+    if (!target) return fail('Member not found.', 404);
+    if (target.is_admin) return fail('Admins can\u2019t be removed here.');
+    const { error } = await db.auth.admin.deleteUser(b.id);
+    if (error) { console.error('deleteMember', error); return fail('Couldn\u2019t remove that member. Try again.'); }
   } else if (b.action === 'setGroup') {
     if (!(await inTeam(b.id)) || (b.groupId && !(await groupInTeam(b.groupId)))) return fail('Not on your team.', 403);
     await db.from('profiles').update({ group_id: b.groupId || null }).eq('id', b.id);
