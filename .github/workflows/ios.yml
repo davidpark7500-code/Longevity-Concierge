@@ -13,4 +13,8 @@ jobs:
       - run: npm run build
       - run: npx cap sync ios
       - name: Build for the iPhone simulator (no signing)
-        run: xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -40
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log | tail -40
+          grep -q "BUILD SUCCEEDED" build.log
