@@ -277,7 +277,7 @@ function circle() {
       <div>${g?.call_link ? `<a class="btn sun" href="${esc(g.call_link)}" target="_blank" rel="noopener">Join ${NAMES.paid} Live</a>` : `<small>You’re a ${NAMES.paid} member. Live session links show up here.</small>`}</div></div>`
     : `<div class="tile lilac join s4"><span class="eyebrow">Members only</span><b class="hv">The Circle<span class="accent">.</span></b>
       <p>${esc(NAMES.paidLine)}</p>
-      <ul><li>${NAMES.paid} Live: weekly members-only Q&amp;A calls</li><li>Members-only challenges</li><li>A private group for people on the same path</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
+      <ul><li>${NAMES.paid} Live: weekly members-only Q&amp;A calls</li><li>Members-only challenges</li><li>A private group, separate from the main feed</li><li>A ${NAMES.paid} badge on your check-ins</li></ul>
       <button class="btn" data-tabgo="plan" id="join-circle">Pick a package to join</button>
       <small>Included with every package: ${Object.values(PACKAGES).map(p => esc(p.name)).join(', ')}.</small></div>`;
   return top() + `<div class="bento">
@@ -285,9 +285,9 @@ function circle() {
     ${keptTile}
     <div class="s4 sec"><h2><span class="hv">${NAMES.challenges}</span></h2>${isAdmin() && !DEMO ? `<button class="linkbtn" data-pact-new="1">+ New challenge</button>` : `<span class="hand">join one, check in daily</span>`}</div>
     <div class="s4 pacts" id="pacts"><p class="status">Loading…</p></div>
-    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}My ${NAMES.paid} group</button></div>
+    <div class="s4 seg small" role="group" aria-label="Feed"><button data-feed="wins" class="${feed === 'wins' ? 'on' : ''}">Everyone</button><button data-feed="group" class="${feed === 'group' ? 'on' : ''}" ${access ? '' : 'disabled aria-disabled="true"'}>${access ? '' : icon('lock', 'lk')}${NAMES.paidThe[0].toUpperCase() + NAMES.paidThe.slice(1)} (private)</button></div>
     <div class="tile s4 composer"><label class="eyebrow" for="post-body">Check in</label>
-      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared with your ${NAMES.paid} group`}"></textarea>
+      <textarea id="post-body" maxlength="600" placeholder="${feed === 'wins' ? 'How did today go? Share a win or ask for support.' : `Shared only with ${NAMES.paidThe} members`}"></textarea>
       <div class="btnrow"><select id="post-win" aria-label="Win tag">${WINS.map(w => `<option value="${esc(w)}">${w || 'No tag'}</option>`).join('')}</select><button class="btn" id="post-send">Check in</button></div></div>
     <div class="s4 feed" id="feed"><p class="status">Loading…</p></div>
     <p class="disclaim s4">Check-ins are member experiences, not medical advice. Please keep medication and dosing questions between you and your provider. Be kind.</p>
