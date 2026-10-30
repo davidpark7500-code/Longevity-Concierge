@@ -941,22 +941,24 @@ function desktopScreen() {
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a> · <button class="linkbtn" type="button" id="desk-continue">Already a member? Sign in on this computer</button></p>
   </div>`;
   requestAnimationFrame(paintAll);
-  document.getElementById('desk-continue').onclick = () => { try { sessionStorage.setItem('lc-desktop-ok', '1'); } catch { /* storage blocked */ } document.body.classList.remove('desk-mode'); authScreen(); };
+  document.getElementById('desk-continue').onclick = () => { deskSignIn = true; document.body.classList.remove('desk-mode'); authScreen(); scrollTo(0, 0); };
 }
 function isDesktop() {
   const p = platform();
   return !p.mobile && matchMedia('(pointer: fine)').matches && innerWidth >= 700;
 }
 /* ---------------- Sign-in + onboarding ---------------- */
+let deskSignIn = false; // computer visitor chose "sign in on this computer" (this page view only; a reload shows the landing again)
 function authScreen(msg = '') {
-  let deskOk = false; try { deskOk = sessionStorage.getItem('lc-desktop-ok') === '1'; } catch { /* storage blocked */ }
-  if (!msg && !deskOk && isDesktop()) return desktopScreen();
+  try { sessionStorage.removeItem('lc-desktop-ok'); } catch { /* storage blocked */ }
+  if (!msg && !deskSignIn && isDesktop()) return desktopScreen();
   tabsEl.hidden = true; uid = 0;
   const p = platform();
   let skipped = false; try { skipped = sessionStorage.getItem('lc-skip-install') === '1'; } catch { /* storage blocked */ }
   const nudge = p.mobile && !p.standalone && !skipped && !msg;
   app.innerHTML = `<div class="auth"><header class="top">${wordmark()}</header>
     <div class="tile hero halftone auth-hero"><canvas data-scene="dawn"></canvas><div class="txt"><span class="eyebrow">Members</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div><button class="watch" type="button" id="watch-promo">${icon('play')}Watch the 18-second tour</button></div>
+    ${isDesktop() ? '<button class="linkbtn desk-back" type="button" id="desk-back">← Back to the overview</button>' : ''}
     ${nudge ? installTile(p) : ''}
     <form class="tile auth-form" id="auth-form" ${nudge ? 'hidden' : ''}><label class="eyebrow" for="auth-email">Sign in or create your account</label>
       <input id="auth-email" class="inp" type="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
@@ -966,6 +968,7 @@ function authScreen(msg = '') {
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a></p></div>`;
   requestAnimationFrame(paintAll);
   document.getElementById('watch-promo').onclick = () => playVideo('promo');
+  const back = document.getElementById('desk-back'); if (back) back.onclick = () => { deskSignIn = false; authScreen(); scrollTo(0, 0); };
   let seenPromo = false; try { seenPromo = localStorage.getItem('lc-promo-seen') === '1'; } catch { /* storage blocked */ }
   if (!seenPromo && !msg && !quietMode() && platform().mobile) { try { localStorage.setItem('lc-promo-seen', '1'); } catch { /* storage blocked */ } playVideo('promo'); }
   const skip = document.getElementById('skip-install');
