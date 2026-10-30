@@ -919,20 +919,24 @@ function desktopScreen() {
   const site = /longevityconcierge\.app$/.test(location.hostname) || /vercel\.app$/.test(location.hostname) ? 'https://longevityconcierge.app' : location.origin;
   const url = site.replace(/^https?:\/\/(www\.)?/, '');
   app.innerHTML = `<div class="desk">
-    <header class="top">${wordmark()}</header>
+    <header class="top">${wordmark()}<span class="hand desk-tag">free wellness app</span></header>
     <div class="desk-grid">
       <div class="tile hero halftone desk-hero"><canvas data-scene="dawn"></canvas>
         <div class="txt"><span class="eyebrow">Your wellness concierge</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
-      <div class="tile desk-qr"><span class="eyebrow">Made for your phone</span>
+      <div class="tile desk-qr"><span class="eyebrow">Get the free app</span>
         <div class="qr">${qrSvg(site + (REF ? '/j/' + REF : '/'))}</div>
         <p class="desk-scan">Scan with your phone camera</p>
-        <p class="desk-or">or type <b>${esc(url)}</b> into your phone’s browser</p></div>
+        <p class="desk-or">or open <b>${esc(url)}</b> on your phone, then add it to your home screen</p></div>
+      <div class="tile desk-video"><video src="${VIDEOS.promo.src}" poster="${VIDEOS.promo.poster}" controls playsinline preload="none"></video>
+        <div class="desk-vtxt"><span class="eyebrow">18-second tour</span><b class="hv">See how it works.</b><p class="desk-lead">Five simple daily habits, a protein and fiber log, beginner moves and a community that keeps you going. Plus a real person to text when you need help.</p><p>Tap play for a quick look at the app.</p></div></div>
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
-      <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate or snap a photo. Totals use USDA nutrition data.</p></div>
+      <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate in your own words, or re-log a favorite in one tap.</p></div>
       <div class="tile desk-feat mint"><b class="hv">Habit coach</b><p>Friendly nudges and simple meal ideas when you need them.</p></div>
-      <div class="tile desk-feat lilac"><b class="hv">Check-ins</b><p>Challenges, cheers and people on the same path.</p></div>
+      <div class="tile desk-feat lilac"><b class="hv">Check-in</b><p>Challenges, cheers and people on the same path.</p></div>
+      <div class="tile desk-what dark"><span class="eyebrow">What we do</span><b class="hv">A concierge for your wellness goals.</b>
+        <p>Start free. When you’re ready, your concierge sets you up with a monthly nutrition package (Foundation, Strength or Complete) with loyalty member perks, and every package includes the Circle: our private group with weekly live calls and members-only challenges.</p></div>
       <div class="tile desk-steps"><span class="eyebrow">How to get the app</span>
-        <ol class="steps"><li>Open the link on your phone.</li><li>Add it to your home screen. The page shows you how on iPhone and Android.</li><li>Open <b>LongevityCo</b> from your home screen and sign up.</li></ol></div>
+        <ol class="steps"><li>Scan the code or open <b>${esc(url)}</b> on your phone.</li><li>Add it to your home screen. The page shows you how on iPhone and Android.</li><li>Open <b>LongevityCo</b> from your home screen and sign up free.</li></ol></div>
     </div>
     <p class="disclaim">General wellness education and coordination, not medical care. <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener">Terms</a> · <button class="linkbtn" type="button" id="desk-continue">Already a member? Sign in on this computer</button></p>
   </div>`;
@@ -941,7 +945,7 @@ function desktopScreen() {
 }
 function isDesktop() {
   const p = platform();
-  return !p.mobile && matchMedia('(pointer: fine)').matches && innerWidth >= 900;
+  return !p.mobile && matchMedia('(pointer: fine)').matches && innerWidth >= 700;
 }
 /* ---------------- Sign-in + onboarding ---------------- */
 function authScreen(msg = '') {

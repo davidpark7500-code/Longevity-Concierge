@@ -434,11 +434,17 @@ body.desk-mode .app{max-width:1120px;padding-bottom:40px}
 .desk-feat.butter{background:var(--butter);color:var(--on-pastel);border:0}
 .desk-feat.mint{background:var(--mint);color:var(--on-pastel);border:0}
 .desk-feat.lilac{background:var(--lilac);color:var(--on-pastel);border:0}
+.desk-tag{color:var(--sun);font-size:26px;transform:rotate(-3deg)}
+.desk-vtxt .desk-lead{font-size:17px;line-height:1.5;max-width:460px}
+.desk-video{grid-column:span 4;display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center;padding:16px}
+.desk-video video{width:200px;aspect-ratio:9/16;border-radius:18px;background:#0f3b33;display:block;object-fit:cover}
+.desk-vtxt{display:flex;flex-direction:column;gap:8px}.desk-vtxt .hv{font-size:44px}.desk-vtxt p{margin:0;font-size:15px}
+.desk-what{grid-column:span 2;display:flex;flex-direction:column;gap:10px;background:var(--forest);color:var(--on-forest);border:0}.desk-what .hv{font-size:30px}.desk-what p{margin:0;font-size:14px;line-height:1.5}
 .desk-steps{grid-column:span 6;display:flex;flex-direction:column;gap:10px}
 .desk-steps .steps{flex-direction:row;gap:28px;padding-left:20px}
 .desk-steps .steps li{flex:1}
 .desk .disclaim .linkbtn{font-size:inherit}
-@media (max-width:1000px){.desk-grid{grid-template-columns:repeat(4,1fr)}.desk-hero{grid-column:span 4}.desk-qr{grid-column:span 4;grid-row:auto}.desk-steps{grid-column:span 4}.desk-feat{grid-column:span 2}}
+@media (max-width:1000px){.desk-grid{grid-template-columns:repeat(4,1fr)}.desk-hero{grid-column:span 4}.desk-qr{grid-column:span 4;grid-row:auto}.desk-video{grid-column:span 4}.desk-what{grid-column:span 4}.desk-steps{grid-column:span 4}.desk-feat{grid-column:span 2}.desk-hero h1.mix .hv{font-size:110px}}
 
 /* ---------- Polish pass: press feedback, motion, native details ---------- */
 button,a.btn,a.tile,.rchip{transition:scale 150ms var(--ease-out)}
