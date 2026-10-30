@@ -921,14 +921,14 @@ function desktopScreen() {
   app.innerHTML = `<div class="desk">
     <header class="top">${wordmark()}<span class="hand desk-tag">free wellness app</span></header>
     <div class="desk-grid">
-      <div class="tile hero halftone desk-hero"><canvas data-scene="dawn"></canvas>
+      <div class="tile hero desk-hero"><canvas data-scene="dawn"></canvas>
         <div class="txt"><span class="eyebrow">Your wellness concierge</span><h1 class="mix"><span class="lt">Small habits.</span><span class="hv">Big life.</span></h1></div></div>
       <div class="tile desk-qr"><span class="eyebrow">Get the free app</span>
         <div class="qr">${qrSvg(site + (REF ? '/j/' + REF : '/'))}</div>
         <p class="desk-scan">Scan with your phone camera</p>
         <p class="desk-or">or open <b>${esc(url)}</b> on your phone, then add it to your home screen</p></div>
-      <div class="tile desk-video"><video src="${VIDEOS.promo.src}" poster="${VIDEOS.promo.poster}" controls playsinline preload="none"></video>
-        <div class="desk-vtxt"><span class="eyebrow">18-second tour</span><b class="hv">See how it works.</b><p class="desk-lead">Five simple daily habits, a protein and fiber log, beginner moves and a community that keeps you going. Plus a real person to text when you need help.</p><p>Tap play for a quick look at the app.</p></div></div>
+      <div class="tile desk-video"><div class="desk-vtxt"><span class="eyebrow">18-second tour</span><b class="hv">See how it works.</b><p class="desk-lead">Five simple daily habits, a protein and fiber log, beginner moves and a community that keeps you going. Plus a real person to text when you need help.</p></div>
+        <video src="${VIDEOS.promo.src}" poster="${VIDEOS.promo.poster}" controls playsinline preload="metadata"></video></div>
       <div class="tile desk-feat"><b class="hv">Daily habits</b><p>Protein, water, fiber, movement and sleep, checked off in seconds.</p></div>
       <div class="tile desk-feat butter"><b class="hv">Food log</b><p>Type what you ate in your own words, or re-log a favorite in one tap.</p></div>
       <div class="tile desk-feat mint"><b class="hv">Habit coach</b><p>Friendly nudges and simple meal ideas when you need them.</p></div>
