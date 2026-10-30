@@ -67,3 +67,10 @@ begin
   return new;
 end $$;
 revoke execute on function public.assign_group() from public, anon, authenticated;
+
+-- Admins always have Circle access, whatever their package (applied 2026-10-29).
+create or replace function public.has_circle(uid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select uid = auth.uid() and coalesce((select is_admin or circle_active or tier in ('essentials','performance','longevity') from profiles where id = uid), false);
+$$;
+-- (assign_group also treats is_admin as a Circle member.)

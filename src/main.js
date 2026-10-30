@@ -104,7 +104,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const icon = (k, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
 const fmt = v => v >= 10 ? Math.round(v) : (Math.round(v * 10) / 10);
 const firstName = () => (profile && profile.first_name) || 'friend';
-const hasCircle = () => !!profile && (profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier));
+const hasCircle = () => !!profile && (profile.is_admin || profile.circle_active || ['essentials', 'performance', 'longevity'].includes(profile.tier));
 const tierKey = () => (profile && profile.tier) || 'free';
 const concierge = () => ({ name: myConcierge?.name?.split(' ')[0] || CONCIERGE.name || 'your concierge', contact: myConcierge?.contact_url || CONCIERGE.contact, label: myConcierge?.contact_label || CONCIERGE.contactLabel });
 const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
