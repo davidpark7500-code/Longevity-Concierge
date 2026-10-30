@@ -4,6 +4,28 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "holisticcreativestudios.com"
+        }
+      ],
+      "destination": "/studio/",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.holisticcreativestudios.com"
+        }
+      ],
+      "destination": "/studio/",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
       "has": [
         {
@@ -16,26 +38,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "holisticcreativestudios.com"
-        }
-      ],
-      "destination": "/studio/index.html"
-    },
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.holisticcreativestudios.com"
-        }
-      ],
-      "destination": "/studio/index.html"
-    },
     {
       "source": "/j/:slug",
       "destination": "/index.html"
