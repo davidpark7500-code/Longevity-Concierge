@@ -58,7 +58,7 @@ const LESSONS = [
 ];
 const TILE_COLORS = ['lilac', 'butter', 'mint', 'peach'];
 const TIERS = {
-  free: { name: 'Free', items: ['Daily habit tracker and food log', `Post to ${NAMES.feed} and join ${NAMES.challenges.toLowerCase()}`, 'Habit coach (lighter daily limit)'] },
+  free: { name: 'Free', items: ['Daily habit tracker and food log', `Post to ${NAMES.feed} and join ${NAMES.challenges.toLowerCase()}`, 'Habit coach'] },
   ...Object.fromEntries(Object.entries(PACKAGES).map(([k, p]) => [k, { name: p.name, items: [p.tagline, ...p.perks] }])),
 };
 const WINS = ['', 'Hit my protein', 'First workout', 'New streak', 'Tried a new recipe', 'Drank all my water'];
@@ -818,7 +818,7 @@ function openCoach() {
     try {
       const r = await cloud.api('/api/coach', { messages: turns.slice(-8), context: coachContext() });
       typing.remove();
-      if (r.kind === 'ok') { turns.push({ role: 'assistant', content: r.text }); add('bot', esc(r.text)); if (r.left <= 5 && r.left > 0) add('bot note', `${r.left} coach message${r.left === 1 ? '' : 's'} left today.`); }
+      if (r.kind === 'ok') { turns.push({ role: 'assistant', content: r.text }); add('bot', esc(r.text)); }
       else if (r.kind === 'limit') { turns.pop(); add('bot note', esc(r.text)); }
       else { turns.push({ role: 'assistant', content: r.text || PROVIDER_TEXT }); add('bot route', esc(r.text || PROVIDER_TEXT)); }
     } catch (err) { typing.remove(); turns.pop(); add('bot note', esc(err.message)); }

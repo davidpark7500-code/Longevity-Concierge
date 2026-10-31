@@ -1,6 +1,6 @@
 // Single source of truth for coach rules. Used by the Supabase edge function AND imported by the browser app.
 
-export const CAPS = { coachDay: 40, coachDayFree: 10, coachBurst: 8, burstMin: 10, estDay: 15 };
+export const CAPS = { coachDay: 40, coachBurst: 8, burstMin: 10, estDay: 15 };
 
 export const EMERG = /\b(suicid\w*|kill (myself|me)|self[- ]?harm|hurt myself|end my life|chest pain|can'?t breathe|overdos\w*|emergency|911)\b/i;
 export const ROUTE = /\b(dose|doses|dosage|dosing|mg|milligrams?|inject\w*|side ?effects?|nausea|vomit\w*|symptoms?|pain|medications?|meds|prescri\w*|peptides?|semaglutide|tirzepatide|ozempic|wegovy|mounjaro|zepbound|glp|trt|testosterone|blood ?work|labs?|diagnos\w*|interact\w*)\b/i;

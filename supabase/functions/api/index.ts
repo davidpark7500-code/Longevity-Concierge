@@ -70,8 +70,7 @@ async function coach(req: Request) {
   const last = history[history.length - 1];
   if (!last || last.role !== 'user') return fail('Send a message first.');
   const pre = preFilter(last.content); if (pre) return json({ kind: pre.kind, text: pre.text });
-  const paid = ['essentials', 'performance', 'longevity'].includes(profile.tier);
-  const dayCap = paid ? CAPS.coachDay : CAPS.coachDayFree;
+  const dayCap = CAPS.coachDay; // same quiet limit for everyone; members only hear about it if they reach it
   const cap = await bumpUsage(user.id, 'coach', dayCap); if (cap) return json({ kind: 'limit', text: cap });
 
   const msgs: any[] = [];
@@ -93,8 +92,7 @@ async function coach(req: Request) {
     await db.from('flags').insert({ user_id: user.id, question: last.content.slice(0, 300), reply: reply.slice(0, 600), reason: String(reason).slice(0, 140) });
     return json({ kind: 'provider', text: PROVIDER_TEXT });
   }
-  const { data: u } = await db.from('usage').select('coach').eq('user_id', user.id).order('day', { ascending: false }).limit(1).single();
-  return json({ kind: 'ok', text: reply, left: Math.max(0, dayCap - (u?.coach || 0)) });
+  return json({ kind: 'ok', text: reply });
 }
 
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
